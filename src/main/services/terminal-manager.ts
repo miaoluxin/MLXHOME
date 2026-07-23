@@ -115,6 +115,18 @@ export class TerminalManager extends EventEmitter {
       this.emit('label-changed', sessionId, label);
     }
   }
+
+  killAll(): void {
+    for (const [id] of this.sessions) {
+      this.kill(id);
+    }
+    for (const [, timer] of this.launchTimers) {
+      clearTimeout(timer);
+    }
+    this.pendingLaunch.clear();
+    this.launchTimers.clear();
+    this.launchCommands.clear();
+  }
 }
 
 let instance: TerminalManager | null = null;

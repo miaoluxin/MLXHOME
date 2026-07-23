@@ -2721,7 +2721,43 @@ assets/PromptManager-xxx.js         10.32 kB
 | 第十三轮 | 07-14 17:00 | 终端复制粘贴+QuickTools+自动刷新 | 0 | 10 |
 | **第十四轮** | **07-22 18:00** | **大规模优化+Opencode+内容搜索+提示词管理** | **8** | **20** |
 | **第十五轮** | **07-23 10:00** | **QuickTools提示词按钮+导出图标+返回位置+Opencode日志** | **0** | **4** |
-| **合计** | | | **33文件** | **85+文件** |
+| **第十六轮** | **07-23 14:00** | **启动不建终端+进程退出+索引设置+ErrorBoundary+CM6懒加载+Claude异步+IPC优化** | **4** | **15** |
+| **合计** | | | **37文件** | **100+文件** |
+
+---
+
+## 第十六轮：全面优化（2026-07-23）
+
+### 改动清单
+
+| # | 改动 | 文件 | 说明 |
+|---|------|------|------|
+| 1 | 启动不创建终端 | `TerminalPanel.tsx` | 删除 `initTerminals`，点 + 再选，启动更快 |
+| 2 | 进程退不出修复 | `main.ts`、`terminal-manager.ts`、`filesystem.ipc.ts`、`claude-tools.ipc.ts` | `killAll()` + 集中清理所有子系统，`before-quit` 同步执行 |
+| 3 | 文件索引设置面板 | **新建** `IndexSettings.tsx`、`useIndexSettingsStore.ts`、修改 `file-indexer.ts`、`EverythingSearch.tsx`、`AppMain.tsx` | 展开式目录树勾选，只索引用户选择的目录，默认只扫家目录 |
+| 4 | Error Boundary | **新建** `ErrorBoundary.tsx`、修改 `AppMain.tsx` | 每个面板独立包裹，崩溃不影响其他面板 |
+| 5 | Claude 对话异步化 | `claude-tools.ipc.ts` | `readFileSync` → `fs.promises.readFile` + `Promise.all` 并发 |
+| 6 | CM6 语言包懒加载 | `CodeMirrorLanguageSupport.ts`、`NddEditor.tsx` | 14 个扩展改为动态 `import()`，首次打开对应文件时才加载 |
+| 7 | 终端 IPC invoke→send | `preload.ts`、`terminal.ipc.ts` | `invoke` → `send`，减少 Promise 分配开销 |
+| 8 | 删除死代码 | 删除 `TwoPanelLayout.tsx`、`ThreePanelLayout.tsx` | 95 行 0 引用旧文件 |
+| 9 | 索引上限 30 万 + 跳过更多目录 | `file-indexer.ts` | `MAX_ENTRIES=300000`，追加 build/dist/target/vendor 等跳过 |
+| 10 | 进程追踪 | `claude-tools.ipc.ts` | 子进程追踪 `activeProcesses` Set，shutdown 时全部 kill |
+
+### 新文件（4个）
+
+| 文件 | 说明 |
+|------|------|
+| `src/renderer/components/layout/ErrorBoundary.tsx` | React Error Boundary，崩溃时显示错误界面 + 重载按钮 |
+| `src/renderer/stores/useIndexSettingsStore.ts` | 索引目录配置，localStorage 持久化 |
+| `src/renderer/components/search/IndexSettings.tsx` | 展开式目录树勾选面板 |
+| `src/renderer/components/plugins/PluginPanel.tsx`（已存在） | — |
+
+### 经验教训
+
+63. **CM6 语言包没有 `default` export** — 动态 `import()` 后需要检查 `typeof mod === 'function'` 还是 `mod.default`，两种格式都存在。
+64. **Node.js 子进程追踪用 `Set<ChildProcess>`** — 在 `execFile` 回调中 `delete`，在 `killAll` 中遍历。注意 `replaceAll` 可能导致函数名重复。
+65. **`before-quit` 是同步事件** — Electron 不 `await` 返回的 Promise，所有清理必须同步执行或用 `require` 同步加载。
+| **合计** | | | **37文件** | **100+文件** |
 
 ---
 

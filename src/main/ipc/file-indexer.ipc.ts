@@ -16,8 +16,8 @@ export function registerFileIndexerIpc(mainWindow: BrowserWindow): void {
   });
 
   // ── 启动索引 ──
-  ipcMain.handle(IPC.FILE_INDEXER_START, async () => {
-    await indexer.start();
+  ipcMain.handle(IPC.FILE_INDEXER_START, async (_event, roots?: string[]) => {
+    await indexer.start(roots);
   });
 
   // ── 重新索引 ──

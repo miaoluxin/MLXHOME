@@ -1,9 +1,10 @@
 import { app, BrowserWindow } from 'electron';
 import path from 'path';
 import { registerTerminalIpc } from './ipc/terminal.ipc';
-import { registerFilesystemIpc } from './ipc/filesystem.ipc';
+import { registerFilesystemIpc, stopWatching } from './ipc/filesystem.ipc';
 import { registerDialogIpc } from './ipc/dialog.ipc';
 import { registerWindowIpc } from './ipc/window.ipc';
+import { getTerminalManager } from './services/terminal-manager';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -70,9 +71,15 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('before-quit', async () => {
+app.on('before-quit', () => {
+  getTerminalManager().killAll();
+  stopWatching();
   try {
-    const { getFileIndexer } = await import('./services/file-indexer');
+    const { getFileIndexer } = require('./services/file-indexer');
     getFileIndexer().stop();
-  } catch { /* 索引器可能未加载，忽略 */ }
+  } catch { /* ignore */ }
+  try {
+    const { killActiveProcesses } = require('./ipc/claude-tools.ipc');
+    killActiveProcesses();
+  } catch { /* ignore */ }
 });

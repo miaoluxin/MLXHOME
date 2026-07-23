@@ -63,29 +63,15 @@ export function TerminalPanel() {
     setShowNewTermDialog(false);
   }, [createTerminal]);
 
-  // 首次加载时自动创建 opencode 终端，Claude 延迟 3s 后创建
-  const initTerminals = useCallback(async () => {
-    await createTerminal({ command: 'opencode', label: 'Opencode' });
-    setTimeout(() => createTerminal({ command: 'claude', label: 'Claude' }), 3000);
-  }, [createTerminal]);
-
-  useEffect(() => {
-    if (projectPath && tabs.length === 0) {
-      initTerminals();
-    }
-  }, [projectPath, tabs.length, initTerminals]);
-
-  // 项目切换（Ctrl+Shift+P）时：杀掉所有旧会话，重置后 effect 自动重建双终端
+  // 项目切换（Ctrl+Shift+P）时：杀掉所有旧会话，重置后让用户手动新建
   const prevSwitchTrigger = useRef(switchTrigger);
   useEffect(() => {
     if (switchTrigger > 0 && switchTrigger !== prevSwitchTrigger.current) {
       prevSwitchTrigger.current = switchTrigger;
-      // 杀掉所有现有 PTY 会话
       const currentTabs = useTerminalStore.getState().tabs;
       currentTabs.forEach((tab) => {
         window.electronAPI.terminal.kill(tab.id);
       });
-      // 重置 store（tabs 清空后上方的 effect 会自动创建双终端）
       resetAll();
     }
   }, [switchTrigger, resetAll]);

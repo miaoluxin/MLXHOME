@@ -15,7 +15,7 @@ export function registerTerminalIpc(mainWindow: BrowserWindow) {
     return sessionId;
   });
 
-  ipcMain.handle(IPC.TERMINAL_WRITE, (_event, sessionId: string, data: string) => {
+  ipcMain.on(IPC.TERMINAL_WRITE, (_event, sessionId: string, data: string) => {
     manager.write(sessionId, data);
   });
 

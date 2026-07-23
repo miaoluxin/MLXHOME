@@ -67,7 +67,10 @@ export function NddEditor({
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const langExt = getLanguageExtension(language);
+    let disposed = false;
+
+    getLanguageExtension(language).then((langExt) => {
+      if (disposed || !containerRef.current) return;
 
     const extensions: any[] = [
       // 核心
@@ -154,9 +157,11 @@ export function NddEditor({
 
     // 自动聚焦编辑器，确保打开文件后立即可编辑
     view.focus();
+    }).catch(() => {});
 
     return () => {
-      view.destroy();
+      disposed = true;
+      if (viewRef.current) viewRef.current.destroy();
       viewRef.current = null;
     };
     // fileId 变化时重建（文件切换）
@@ -253,12 +258,16 @@ export function NddEditor({
 
   // ── 语言变化 ──
   useEffect(() => {
-    const view = viewRef.current;
-    if (!view) return;
-    const newLang = getLanguageExtension(language);
-    view.dispatch({
-      effects: langComp.current.reconfigure(newLang),
+    let disposed = false;
+    getLanguageExtension(language).then((newLang) => {
+      if (disposed) return;
+      const view = viewRef.current;
+      if (!view) return;
+      view.dispatch({
+        effects: langComp.current.reconfigure(newLang),
+      });
     });
+    return () => { disposed = true; };
   }, [language]);
 
   return (

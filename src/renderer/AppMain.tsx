@@ -12,6 +12,8 @@ import { FileBrowser } from './components/filesystem/FileBrowser';
 import { EditorPanel } from './components/editor/EditorPanel';
 import { QuickTools } from './components/layout/QuickTools';
 import { getDragSource, getDragOverTarget } from './components/layout/DraggablePanelHeader';
+import { ErrorBoundary } from './components/layout/ErrorBoundary';
+import { useIndexSettingsStore } from './stores/useIndexSettingsStore';
 import { loadSession, collectSessionData, persistSession, clearSession } from './services/sessionManager';
 import { initPluginSystem } from './plugin-system/plugin-manager';
 
@@ -199,9 +201,11 @@ export default function AppMain() {
     };
     window.addEventListener('keydown', handleToggleBrowser);
 
-    // 延迟10秒启动全盘文件索引（不阻塞UI首屏渲染）
+    // 延迟10秒启动文件索引（不阻塞UI首屏渲染）
+    useIndexSettingsStore.getState().load();
+    const indexRoots = useIndexSettingsStore.getState().roots;
     setTimeout(() => {
-      window.electronAPI.fileIndexer.start().catch((err) => {
+      window.electronAPI.fileIndexer.start(indexRoots.length > 0 ? indexRoots : undefined).catch((err) => {
         console.warn('[AppMain] 文件索引启动失败（非关键）:', err);
       });
     }, 10000);
@@ -291,16 +295,16 @@ export default function AppMain() {
   }, [panelOrder, showTerminal, showEditorPanel, showConversations, showSkills, showMcpConfig, showBrowser, showPrompts, showFileBrowser, showEverythingSearch, showContentSearch]);
 
   const panelComponentMap: Record<string, React.ReactNode> = {
-    terminal: <TerminalPanel />,
-    editor: <EditorPanel />,
-    conversations: <Suspense fallback={<div className="h-full bg-bg-deep" />}><ConversationManager /></Suspense>,
-    skills: <Suspense fallback={<div className="h-full bg-bg-deep" />}><SkillManager /></Suspense>,
-    mcpConfig: <Suspense fallback={<div className="h-full bg-bg-deep" />}><McpConfigTool /></Suspense>,
-    browser: <Suspense fallback={<div className="h-full bg-bg-deep" />}><BrowserTool /></Suspense>,
-    fileBrowser: <FileBrowser />,
-    everythingSearch: <Suspense fallback={<div className="h-full bg-bg-deep" />}><EverythingSearch /></Suspense>,
-    contentSearch: <Suspense fallback={<div className="h-full bg-bg-deep" />}><ContentSearch /></Suspense>,
-    prompts: <Suspense fallback={<div className="h-full bg-bg-deep" />}><PromptManager /></Suspense>,
+    terminal: <ErrorBoundary name="终端"><TerminalPanel /></ErrorBoundary>,
+    editor: <ErrorBoundary name="编辑器"><EditorPanel /></ErrorBoundary>,
+    conversations: <ErrorBoundary name="对话管理"><Suspense fallback={<div className="h-full bg-bg-deep" />}><ConversationManager /></Suspense></ErrorBoundary>,
+    skills: <ErrorBoundary name="Skill"><Suspense fallback={<div className="h-full bg-bg-deep" />}><SkillManager /></Suspense></ErrorBoundary>,
+    mcpConfig: <ErrorBoundary name="MCP"><Suspense fallback={<div className="h-full bg-bg-deep" />}><McpConfigTool /></Suspense></ErrorBoundary>,
+    browser: <ErrorBoundary name="浏览器"><Suspense fallback={<div className="h-full bg-bg-deep" />}><BrowserTool /></Suspense></ErrorBoundary>,
+    fileBrowser: <ErrorBoundary name="文件浏览器"><FileBrowser /></ErrorBoundary>,
+    everythingSearch: <ErrorBoundary name="文件搜索"><Suspense fallback={<div className="h-full bg-bg-deep" />}><EverythingSearch /></Suspense></ErrorBoundary>,
+    contentSearch: <ErrorBoundary name="内容搜索"><Suspense fallback={<div className="h-full bg-bg-deep" />}><ContentSearch /></Suspense></ErrorBoundary>,
+    prompts: <ErrorBoundary name="提示词"><Suspense fallback={<div className="h-full bg-bg-deep" />}><PromptManager /></Suspense></ErrorBoundary>,
   };
 
   // ── 三列一横 (水平) 布局 ──

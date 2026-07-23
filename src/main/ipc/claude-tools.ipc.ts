@@ -3,7 +3,39 @@ import { IPC } from '../../shared/ipc-channels';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { execFile } from 'child_process';
+import { execFile, ChildProcess } from 'child_process';
+
+const activeProcesses = new Set<ChildProcess>();
+
+function getOpencodePath(): string {
+  const { platform, env } = process;
+  const homeDir = os.homedir();
+  if (platform === 'win32') {
+    const local = path.join(env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local'), 'opencode', 'opencode-mlx.exe');
+    if (fs.existsSync(local)) return local;
+    const chocolatey = 'C:\\ProgramData\\chocolatey\\bin\\opencode.exe';
+    if (fs.existsSync(chocolatey)) return chocolatey;
+  }
+  return 'opencode';
+}
+
+function runOpencodeTracked(args: string[], timeout = 10000): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = execFile(getOpencodePath(), args, { timeout }, (err, stdout) => {
+      activeProcesses.delete(child);
+      if (err) reject(err);
+      else resolve(stdout);
+    });
+    activeProcesses.add(child);
+  });
+}
+
+export function killActiveProcesses(): void {
+  for (const child of activeProcesses) {
+    try { child.kill(); } catch { /* ignore */ }
+  }
+  activeProcesses.clear();
+}
 
 export function registerClaudeToolsIpc() {
 const homeDir = os.homedir();
@@ -15,10 +47,9 @@ ipcMain.handle(IPC.CLAUDE_CONVERSATIONS_LIST, async () => {
     const historyPath = path.join(claudeDir, 'history.jsonl');
     if (!fs.existsSync(historyPath)) return [];
 
-    const content = fs.readFileSync(historyPath, 'utf-8');
+    const content = await fs.promises.readFile(historyPath, 'utf-8');
     const lines = content.trim().split('\n').filter(Boolean);
 
-    // 按 sessionId 分组
     const groups = new Map<string, { display: string; timestamps: number[]; project: string }>();
     for (const line of lines) {
       try {
@@ -38,44 +69,33 @@ ipcMain.handle(IPC.CLAUDE_CONVERSATIONS_LIST, async () => {
       } catch { /* skip */ }
     }
 
-    // 辅助：project 路径 → projects 子目录名
-    // D:\MLXObsidianDOC\MLX_AI → D--MLXObsidianDOC-MLX_AI
     const projectToDir = (p: string) => p.replace(/:/g, '-').replace(/[\\/]/g, '-');
 
     const results: Array<{ id: string; title: string; date: string; messageCount: number; projectPath: string }> = [];
+    const checkPromises: Promise<void>[] = [];
     for (const [sid, g] of groups) {
-      const timestamps = g.timestamps.sort((a, b) => a - b);
-      const entryCount = timestamps.length;
-
-      // 尝试从 projects 目录读取消息文件获取真实消息数
-      // 没有实际消息内容的对话直接跳过，不展示在列表中
-      let messageCount = 0;
-      let hasMessageFile = false;
-      if (g.project && sid) {
-        const dirName = projectToDir(g.project);
-        const msgPath = path.join(claudeDir, 'projects', dirName, sid + '.jsonl');
-        if (fs.existsSync(msgPath)) {
+      checkPromises.push(
+        (async () => {
+          if (!g.project || !sid) return;
+          const dirName = projectToDir(g.project);
+          const msgPath = path.join(claudeDir, 'projects', dirName, sid + '.jsonl');
           try {
-            const fc = fs.readFileSync(msgPath, 'utf-8').trim();
-            if (fc) {
-              messageCount = fc.split('\n').filter(Boolean).length;
-              hasMessageFile = true;
-            }
+            const fc = await fs.promises.readFile(msgPath, 'utf-8');
+            const trimmed = fc.trim();
+            if (!trimmed) return;
+            const timestamps = g.timestamps.sort((a, b) => a - b);
+            results.push({
+              id: sid,
+              title: g.display.substring(0, 80),
+              date: new Date(timestamps[timestamps.length - 1]).toISOString(),
+              messageCount: trimmed.split('\n').filter(Boolean).length,
+              projectPath: g.project,
+            });
           } catch { /* skip */ }
-        }
-      }
-
-      // 跳过来自 history.jsonl 但没有实际消息内容的对话
-      if (!hasMessageFile) continue;
-
-      results.push({
-        id: sid,
-        title: g.display.substring(0, 80),
-        date: new Date(timestamps[timestamps.length - 1]).toISOString(),
-        messageCount,
-        projectPath: g.project,
-      });
+        })()
+      );
     }
+    await Promise.all(checkPromises);
 
     results.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return results.slice(0, 200);
@@ -100,10 +120,10 @@ ipcMain.handle(IPC.CLAUDE_CONVERSATION_MESSAGES, async (_event, conversationId: 
     ];
 
     let msgPath = '';
-    for (const cp of candidatePaths) { if (fs.existsSync(cp)) { msgPath = cp; break; } }
+    for (const cp of candidatePaths) { try { await fs.promises.access(cp); msgPath = cp; break; } catch { /* skip */ } }
     if (!msgPath) return { messages, totalInputTokens: 0, totalOutputTokens: 0, model: undefined };
 
-    const content = fs.readFileSync(msgPath, 'utf-8');
+    const content = await fs.promises.readFile(msgPath, 'utf-8');
     const lines = content.trim().split('\n').filter(Boolean);
 
     for (const line of lines) {
@@ -176,8 +196,9 @@ ipcMain.handle(IPC.CLAUDE_CONVERSATION_RESUME, async (_event, conversationId: st
 // ── 删除对话 ──
 ipcMain.handle(IPC.CLAUDE_CONVERSATION_DELETE, async (_event, conversationId: string, filePath: string) => {
   try {
-    if (filePath && fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    if (filePath) {
+      try { await fs.promises.access(filePath); } catch { return { success: false, error: '文件不存在' }; }
+      await fs.promises.unlink(filePath);
       return { success: true };
     }
     return { success: false, error: '文件不存在' };
@@ -358,39 +379,19 @@ ipcMain.handle(IPC.CLAUDE_MCP_SAVE, async (_event, servers: Record<string, any>)
 
 // ── Opencode 对话子系统 ──
 
-function getOpencodePath(): string {
-  const { platform, env } = process;
-  const homeDir = os.homedir();
-  if (platform === 'win32') {
-    const local = path.join(env.LOCALAPPDATA || path.join(homeDir, 'AppData', 'Local'), 'opencode', 'opencode-mlx.exe');
-    if (fs.existsSync(local)) return local;
-    const chocolatey = 'C:\\ProgramData\\chocolatey\\bin\\opencode.exe';
-    if (fs.existsSync(chocolatey)) return chocolatey;
-  }
-  return 'opencode';
-}
-
-function runOpencode(args: string[]): Promise<string> {
-  return new Promise((resolve, reject) => {
-    execFile(getOpencodePath(), args, { timeout: 10000 }, (err, stdout) => {
-      if (err) reject(err);
-      else resolve(stdout);
-    });
-  });
-}
-
 ipcMain.handle(IPC.OPENCODE_CONVERSATIONS_LIST, async () => {
   try {
-    const stdout = await runOpencode(['session', 'list', '--format', 'json', '--max-count', '200']);
+    const stdout = await runOpencodeTracked(['session', 'list', '--format', 'json', '--max-count', '200']);
     const sessions = JSON.parse(stdout);
     if (!Array.isArray(sessions)) return [];
 
     // 批量查询所有 session 的消息数（替代 N+1）
     const countMap = new Map<string, number>();
+    let cntStdout2 = '';
     try {
-      const cntStdout = await runOpencode(['db', 'SELECT session_id, COUNT(*) as message_count FROM message GROUP BY session_id']);
-      console.log('[OpencodeTools] batch count raw:', cntStdout.slice(0, 500));
-      const rows = JSON.parse(cntStdout);
+      cntStdout2 = await runOpencodeTracked(['db', 'SELECT session_id, COUNT(*) as message_count FROM message GROUP BY session_id']);
+      console.log('[OpencodeTools] batch count raw:', cntStdout2.slice(0, 500));
+      const rows = JSON.parse(cntStdout2);
       if (Array.isArray(rows)) {
         for (const row of rows) {
           const sid = row.session_id || row.id;
@@ -399,7 +400,7 @@ ipcMain.handle(IPC.OPENCODE_CONVERSATIONS_LIST, async () => {
         }
       }
     } catch (e) {
-      console.warn('[OpencodeTools] 批量查询消息数失败:', e, 'output:', cntStdout?.slice(0, 200));
+      console.warn('[OpencodeTools] 批量查询消息数失败:', e, 'output:', cntStdout2?.slice(0, 200));
     }
 
     const results = sessions
@@ -422,7 +423,7 @@ ipcMain.handle(IPC.OPENCODE_CONVERSATIONS_LIST, async () => {
 
 ipcMain.handle(IPC.OPENCODE_CONVERSATION_MESSAGES, async (_event, conversationId: string, _projectPath: string) => {
   try {
-    const stdout = await runOpencode(['db', `SELECT m.id, m.time_created, m.data FROM message m WHERE m.session_id='${conversationId.replace(/'/g, "''")}' ORDER BY m.time_created`]);
+    const stdout = await runOpencodeTracked(['db', `SELECT m.id, m.time_created, m.data FROM message m WHERE m.session_id='${conversationId.replace(/'/g, "''")}' ORDER BY m.time_created`]);
     const lines = stdout.trim().split('\n').filter(Boolean);
     const messages: Array<{ role: string; content: string; timestamp: string }> = [];
 
@@ -455,7 +456,7 @@ ipcMain.handle(IPC.OPENCODE_CONVERSATION_RESUME, async (_event, conversationId: 
 
 ipcMain.handle(IPC.OPENCODE_CONVERSATION_DELETE, async (_event, conversationId: string) => {
   try {
-    await runOpencode(['session', 'delete', conversationId]);
+    await runOpencodeTracked(['session', 'delete', conversationId]);
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err.message };

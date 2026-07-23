@@ -1,72 +1,54 @@
 import type { Extension } from '@codemirror/state';
-import { javascript } from '@codemirror/lang-javascript';
-import { json } from '@codemirror/lang-json';
-import { html } from '@codemirror/lang-html';
-import { css } from '@codemirror/lang-css';
-import { markdown } from '@codemirror/lang-markdown';
-import { python } from '@codemirror/lang-python';
-import { java } from '@codemirror/lang-java';
-import { cpp } from '@codemirror/lang-cpp';
-import { xml } from '@codemirror/lang-xml';
-import { sql } from '@codemirror/lang-sql';
-import { rust } from '@codemirror/lang-rust';
-import { go } from '@codemirror/lang-go';
-import { php } from '@codemirror/lang-php';
-import { yaml } from '@codemirror/lang-yaml';
 
-/**
- * MLX 语言标识 → CodeMirror 6 语言扩展映射表
- * 对应 useEditorStore.ts 中的 LANG_MAP
- */
-const LANGUAGE_EXTENSIONS: Record<string, Extension> = {
-  // ── JavaScript 系列 ──
-  javascript: javascript(),
-  typescript: javascript({ typescript: true }),
-  jsx: javascript({ jsx: true }),
-  tsx: javascript({ jsx: true, typescript: true }),
-
-  // ── Web ──
-  html: html(),
-  css: css(),
-  scss: css(),
-  less: css(),
-  xml: xml(),
-
-  // ── 数据格式 ──
-  json: json(),
-  yaml: yaml(),
-  yml: yaml(),
-  markdown: markdown(),
-  md: markdown(),
-  sql: sql(),
-  properties: yaml(),
-
-  // ── 编程语言 ──
-  python: python(),
-  java: java(),
-  c: cpp(),
-  cpp: cpp(),
-  csharp: cpp(),
-  go: go(),
-  rust: rust(),
-  php: php(),
-  ruby: python(),
-
-  // ── Shell ──
-  shell: javascript(),
-  powershell: javascript(),
-  sh: javascript(),
-  bash: javascript(),
-  zsh: javascript(),
-
-  // ── 其他使用纯文本 ──
-  plaintext: [],
+const LANG_MODULES: Record<string, () => Promise<any>> = {
+  javascript: () => import('@codemirror/lang-javascript'),
+  json: () => import('@codemirror/lang-json'),
+  html: () => import('@codemirror/lang-html'),
+  css: () => import('@codemirror/lang-css'),
+  markdown: () => import('@codemirror/lang-markdown'),
+  python: () => import('@codemirror/lang-python'),
+  java: () => import('@codemirror/lang-java'),
+  cpp: () => import('@codemirror/lang-cpp'),
+  xml: () => import('@codemirror/lang-xml'),
+  sql: () => import('@codemirror/lang-sql'),
+  rust: () => import('@codemirror/lang-rust'),
+  go: () => import('@codemirror/lang-go'),
+  php: () => import('@codemirror/lang-php'),
+  yaml: () => import('@codemirror/lang-yaml'),
 };
 
-/**
- * 根据 MLX 语言标识获取 CM6 扩展
- * fallback 到空扩展（纯文本模式）
- */
-export function getLanguageExtension(language: string): Extension {
-  return LANGUAGE_EXTENSIONS[language] ?? [];
+const extCache = new Map<string, Extension>();
+
+const LANG_ALIAS: Record<string, string> = {
+  typescript: 'javascript', tsx: 'javascript', jsx: 'javascript',
+  scss: 'css', less: 'css',
+  yml: 'yaml', properties: 'yaml', md: 'markdown',
+  c: 'cpp', csharp: 'cpp',
+  ruby: 'python',
+  shell: 'javascript', powershell: 'javascript', sh: 'javascript', bash: 'javascript', zsh: 'javascript',
+};
+
+async function getLang(lang: string): Promise<Extension> {
+  const cached = extCache.get(lang);
+  if (cached) return cached;
+  const loader = LANG_MODULES[lang];
+  if (!loader) return [];
+  try {
+    const mod = await loader();
+    const ext = typeof mod === 'function' ? mod() : (typeof mod.default === 'function' ? mod.default() : mod);
+    extCache.set(lang, ext);
+    return ext;
+  } catch { return []; }
+}
+
+export async function getLanguageExtension(language: string): Promise<Extension> {
+  if (language === 'plaintext') return [];
+  const base = LANG_ALIAS[language] || language;
+  if (LANG_MODULES[base]) return getLang(base);
+  return [];
+}
+
+export function preloadLanguage(language: string): void {
+  const base = LANG_ALIAS[language] || language;
+  if (LANG_MODULES[base]) LANG_MODULES[base]().catch(() => {});
 }

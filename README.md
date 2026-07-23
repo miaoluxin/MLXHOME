@@ -50,40 +50,40 @@ npm run dev
 
 ---
 
-## ⌨️ Keyboard Shortcuts
+## ⌨️ Keyboard Shortcuts / 快捷键
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+B` | Toggle File Browser |
-| `Ctrl+Shift+F` | Toggle Content Search |
-| `Ctrl+Shift+M` | Toggle Prompt Manager |
-| `Ctrl+Shift+P` | Switch Project |
-| `Ctrl+Shift+/` | Show Keyboard Shortcuts |
-| `Ctrl+N` | New File |
-| `Ctrl+O` | Open File |
-| `Ctrl+S` | Save |
-| `Ctrl+W` | Close Tab |
-| `Ctrl+F` | Find |
-| `Ctrl+H` | Find & Replace |
-| `F2` | Rename (file browser) |
-| `Delete` | Delete (file browser) |
+| Shortcut | Action | 功能 |
+|----------|--------|------|
+| `Ctrl+B` | Toggle File Browser | 切换文件浏览器 |
+| `Ctrl+Shift+F` | Toggle Content Search | 内容搜索 |
+| `Ctrl+Shift+M` | Toggle Prompt Manager | 提示词管理 |
+| `Ctrl+Shift+P` | Switch Project | 切换项目 |
+| `Ctrl+Shift+/` | Show Keyboard Shortcuts | 快捷键帮助 |
+| `Ctrl+N` | New File | 新建文件 |
+| `Ctrl+O` | Open File | 打开文件 |
+| `Ctrl+S` | Save | 保存 |
+| `Ctrl+W` | Close Tab | 关闭标签 |
+| `Ctrl+F` | Find | 查找 |
+| `Ctrl+H` | Find & Replace | 查找替换 |
+| `F2` | Rename (file browser) | 重命名 |
+| `Delete` | Delete (file browser) | 删除 |
 
 ---
 
-## 🛠 Tech Stack
+## 🛠 Tech Stack / 技术栈
 
-| Layer | Technology |
-|-------|-----------|
-| Desktop Framework | Electron 43 |
-| UI | React 19 + TypeScript 5.8 |
-| Build | Vite 6 + vite-plugin-electron |
-| Terminal | xterm.js 5.3 + @lydell/node-pty |
-| Editor | CodeMirror 6 (15 language packages) |
-| State Management | Zustand 5 (9 stores) |
-| Animation | Framer Motion 12 |
-| Styling | Tailwind CSS 3 + CSS custom properties |
-| File Watching | chokidar 4 |
-| Packaging | electron-builder 25 (portable exe) |
+| Layer | 层 | Technology |
+|-------|-------|-----------|
+| Desktop Framework | 桌面框架 | Electron 43 |
+| UI | 用户界面 | React 19 + TypeScript 5.8 |
+| Build | 构建 | Vite 6 + vite-plugin-electron |
+| Terminal | 终端 | xterm.js 5.3 + @lydell/node-pty |
+| Editor | 编辑器 | CodeMirror 6 (15 language packages) |
+| State Management | 状态管理 | Zustand 5 (11 stores) |
+| Animation | 动画 | Framer Motion 12 |
+| Styling | 样式 | Tailwind CSS 3 + CSS custom properties |
+| File Watching | 文件监听 | chokidar 4 |
+| Packaging | 打包 | electron-builder 25 (portable exe) |
 
 ---
 

@@ -4,7 +4,7 @@ import { IPC } from '../shared/ipc-channels';
 const electronAPI = {
   terminal: {
     create: (options: any) => ipcRenderer.invoke(IPC.TERMINAL_CREATE, options),
-    write: (sessionId: string, data: string) => ipcRenderer.invoke(IPC.TERMINAL_WRITE, sessionId, data),
+    write: (sessionId: string, data: string) => { ipcRenderer.send(IPC.TERMINAL_WRITE, sessionId, data); },
     resize: (sessionId: string, cols: number, rows: number) => ipcRenderer.invoke(IPC.TERMINAL_RESIZE, sessionId, cols, rows),
     kill: (sessionId: string) => ipcRenderer.invoke(IPC.TERMINAL_KILL, sessionId),
     rename: (sessionId: string, label: string) => ipcRenderer.invoke(IPC.TERMINAL_RENAME, sessionId, label),

@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { serialize, deserialize } from 'v8';
 import { app } from 'electron';
 import chokidar, { FSWatcher } from 'chokidar';
@@ -23,12 +24,17 @@ interface IndexSnapshot {
 
 const INDEX_VERSION = 2;
 
+const MAX_ENTRIES = 300000;
+
 // ── 跳过的系统目录 ──
 const SKIP_DIRS = new Set([
   'Windows', 'Program Files', 'Program Files (x86)', 'ProgramData',
   '$Recycle.Bin', 'System Volume Information', 'Recovery',
   'node_modules', '.git', '.svn', '.hg', '__pycache__',
-  'AppData',
+  'AppData', 'build', 'dist', 'target', 'out', 'bin', 'obj',
+  'vendor', 'bower_components', '.cache', 'tmp', 'temp',
+  'log', 'logs', '.gradle', '.nuget', '.m2', 'Library',
+  'packages', 'ThirdParty',
 ]);
 
 function shouldSkipDir(name: string): boolean {
@@ -86,18 +92,22 @@ export class FileIndexer {
   // ═══════════════════════════════════════
   //  启动
   // ═══════════════════════════════════════
-  async start(): Promise<void> {
+  async start(roots?: string[]): Promise<void> {
     // 1) 尝试从磁盘加载缓存
     if (this.loadIndex()) {
       this._isReady = true;
       this.readyCb?.();
-      // 2) 后台启动增量监听 + 扫描变更
       this.startWatching();
       this.startBackgroundRefresh();
       return;
     }
 
-    // 3) 无缓存 → 全量扫描
+    // 2) 无缓存 → 扫描指定目录，未指定时只扫家目录
+    this.driveRoots = roots && roots.length > 0 ? roots : [];
+    if (this.driveRoots.length === 0) {
+      const home = process.env.USERPROFILE || os.homedir();
+      if (home) this.driveRoots = [home];
+    }
     await this.fullScan();
   }
 
@@ -289,6 +299,7 @@ export class FileIndexer {
         );
 
         for (let j = 0; j < batch.length; j++) {
+          if (this.indexedCount >= MAX_ENTRIES) break;
           const stat = stats[j];
           if (!stat) continue;
           const name = batch[j];
@@ -314,6 +325,8 @@ export class FileIndexer {
           this.pathIndex.set(fullPath, entry);
           this.indexedCount++;
         }
+
+        if (this.indexedCount >= MAX_ENTRIES) break;
 
         if (this.indexedCount % 1000 < BATCH_SIZE) {
           this.progressCb?.({ indexed: this.indexedCount, estimatedTotal: 0 });

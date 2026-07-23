@@ -107,7 +107,7 @@ function startWatching(dirPath: string) {
   }
 }
 
-function stopWatching() {
+export function stopWatching() {
   if (watcher) {
     watcher.close();
     watcher = null;

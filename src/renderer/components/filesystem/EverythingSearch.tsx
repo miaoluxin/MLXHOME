@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   VscSearch, VscClose, VscFile, VscFolder, VscFolderOpened,
   VscFileCode, VscFileMedia, VscFilePdf, VscFileZip,
-  VscSymbolFile, VscLoading, VscCopy, VscEdit,
+  VscSymbolFile, VscLoading, VscCopy, VscEdit, VscSettingsGear,
 } from 'react-icons/vsc';
 import { DraggablePanelHeader } from '../layout/DraggablePanelHeader';
 import { ContextMenu, type ContextMenuItem } from './ContextMenu';
@@ -10,6 +10,8 @@ import { useFileStore } from '../../stores/useFileStore';
 import { useLayoutStore } from '../../stores/useLayoutStore';
 import { useFileClipboardStore } from '../../stores/useFileClipboardStore';
 import type { SearchResult, IndexStatus } from '../../../shared/types';
+import { IndexSettings } from '../search/IndexSettings';
+import { useIndexSettingsStore } from '../../stores/useIndexSettingsStore';
 
 // ── 文件类型 → 图标映射 ──
 function getFileIcon(name: string, isDir: boolean) {
@@ -50,6 +52,7 @@ export function EverythingSearch() {
   const [isScanning, setIsScanning] = useState(false);
   const [indexedCount, setIndexedCount] = useState(0);
   const [indexLoading, setIndexLoading] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
   const toggleEverythingSearch = useLayoutStore((s) => s.toggleEverythingSearch);
@@ -289,7 +292,10 @@ export function EverythingSearch() {
           <VscSearch size={15} className="text-accent" />
           <span className="text-xs font-medium text-text-secondary">文件搜索</span>
         </div>
-        {/* Bug #9: 增强关闭按钮可见性 */}
+        <button onClick={() => setShowSettings(true)}
+          className="w-6 h-6 flex items-center justify-center rounded hover:bg-bg-hover text-text-secondary hover:text-text-primary transition-colors" title="索引设置">
+          <VscSettingsGear size={14} />
+        </button>
         <button
           onClick={toggleEverythingSearch}
           className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-500/20 text-text-secondary hover:text-red-400 transition-colors"
@@ -451,6 +457,11 @@ export function EverythingSearch() {
           items={buildContextMenuItems(contextMenu.result)}
           onClose={() => setContextMenu(null)}
         />
+      )}
+
+      {/* 索引设置面板 */}
+      {showSettings && (
+        <IndexSettings onClose={() => setShowSettings(false)} />
       )}
     </div>
   );
