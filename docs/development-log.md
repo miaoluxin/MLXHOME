@@ -2722,11 +2722,37 @@ assets/PromptManager-xxx.js         10.32 kB
 | **第十四轮** | **07-22 18:00** | **大规模优化+Opencode+内容搜索+提示词管理** | **8** | **20** |
 | **第十五轮** | **07-23 10:00** | **QuickTools提示词按钮+导出图标+返回位置+Opencode日志** | **0** | **4** |
 | **第十六轮** | **07-23 14:00** | **启动不建终端+进程退出+索引设置+ErrorBoundary+CM6懒加载+Claude异步+IPC优化** | **4** | **15** |
-| **合计** | | | **37文件** | **100+文件** |
+| **第十七轮** | **07-23 18:00** | **暗黑主题加深+主题应用修复+Opencode日志+EverythingSearch同步** | **0** | **6** |
+| **合计** | | | **37文件** | **106+文件** |
 
 ---
 
 ## 第十六轮：全面优化（2026-07-23）
+
+### 改动清单
+
+...
+
+---
+
+## 第十七轮：主题修复+暗黑加深（2026-07-23）
+
+### 改动
+
+| # | 改动 | 文件 | 说明 |
+|---|------|------|------|
+| 1 | 暗黑主题加深 | `useThemeStore.ts` | 背景从 Tokyo Night (`#1a1b26`) 改为 Material Dark (`#0a0a0a`) |
+| 2 | `clearInlineColors` 补终端色 | `useThemeStore.ts` | 缺少 `--terminal-bg`/`--terminal-fg`/`--terminal-cursor` 三个变量 |
+| 3 | `handleApply` 内置主题分支修复 | `ThemeManager.tsx` | 内置主题也先 `applyColors` 保存编辑，不调 `setTheme`（清 inline） |
+| 4 | Opencode 日志增强 | `claude-tools.ipc.ts` | 打印完整原始 SQL 输出前 2000 字符，方便排查字段名 |
+| 5 | `electron.d.ts` 类型修正 | `electron.d.ts` | `fileIndexer.start` 签名改为 `(roots?: string[])` |
+| 6 | EverythingSearch 同步 | `EverythingSearch.tsx` + `IndexSettings.tsx` + `useIndexSettingsStore.ts` | 补上之前遗漏的设置面板文件 |
+
+### 经验教训
+
+66. **`clearInlineColors` 必须覆盖所有 CSS 变量** — 漏掉终端色变量会导致自定义主题切换回内置主题后终端色残留
+67. **`handleApply` 对内置主题不能调 `setTheme`** — `setTheme` → `applyTheme` → `clearInlineColors` 会清除用户实时编辑的内联颜色。应该直接 `previewColors(editingColors)` 保留编辑
+68. **手工同步文件容易遗漏** — 第一次打包时 EverythingSearch 和 AppMain 的改动没有同步到 claudeforge，导致齿轮按钮不出现在打包版中。后续用批量脚本确保完整性
 
 ### 改动清单
 

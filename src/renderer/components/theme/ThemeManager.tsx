@@ -62,15 +62,15 @@ function setAlpha(color: string, alpha: number): string {
 
 function makeDefaultColors(): ThemeColors {
   return {
-    bgDeepest: '#1a1b26', bgDeep: '#1f2335', bgBase: '#24283b',
-    bgRaised: '#292e42', bgHover: '#343a52',
-    textPrimary: '#c0caf5', textSecondary: '#787c99', textTertiary: '#565f89',
-    accent: '#7aa2f7', accentHover: '#89b4fa',
-    borderSubtle: 'rgba(192,202,245,0.08)', borderHover: 'rgba(192,202,245,0.14)',
-    glassBg: 'rgba(26,27,38,0.85)', glassBlur: '20px',
-    scrollbarThumb: 'rgba(192,202,245,0.12)', scrollbarThumbHover: 'rgba(192,202,245,0.22)',
-    windowBg: '#1a1b26', globalOpacity: '1',
-    terminalBg: '#15161e', terminalFg: '#c0caf5', terminalCursor: '#7aa2f7',
+    bgDeepest: '#0a0a0a', bgDeep: '#0d0d0d', bgBase: '#121212',
+    bgRaised: '#1a1a1a', bgHover: '#242424',
+    textPrimary: '#e0e0e0', textSecondary: '#999999', textTertiary: '#666666',
+    accent: '#0a84ff', accentHover: '#409cff',
+    borderSubtle: 'rgba(255,255,255,0.06)', borderHover: 'rgba(255,255,255,0.12)',
+    glassBg: 'rgba(10,10,10,0.90)', glassBlur: '20px',
+    scrollbarThumb: 'rgba(255,255,255,0.10)', scrollbarThumbHover: 'rgba(255,255,255,0.20)',
+    windowBg: '#0a0a0a', globalOpacity: '1',
+    terminalBg: '#080808', terminalFg: '#e0e0e0', terminalCursor: '#0a84ff',
   };
 }
 
@@ -179,8 +179,13 @@ export function ThemeManager({ onClose }: Props) {
       } else {
         updateCustomTheme(newTheme);
       }
+      setTheme(selectedId);
+    } else {
+      // 内置主题：直接应用编辑后的颜色，不清除内联样式
+      // 不调 setTheme（它会 clearInlineColors 清除用户修改）
+      previewColors(editingColors);
+      localStorage.setItem('mlx-theme', selectedId);
     }
-    setTheme(selectedId);
     onClose();
   };
 

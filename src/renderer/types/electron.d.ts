@@ -29,7 +29,7 @@ export interface ElectronAPI {
   fileIndexer: {
     search: (query: string) => Promise<SearchResult[]>;
     getStatus: () => Promise<IndexStatus>;
-    start: () => Promise<void>;
+    start: (roots?: string[]) => Promise<void>;
     reindex: () => Promise<void>;
     onProgress: (callback: (data: { indexed: number; estimatedTotal: number }) => void) => () => void;
     onReady: (callback: () => void) => () => void;

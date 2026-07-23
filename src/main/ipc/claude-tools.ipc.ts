@@ -390,7 +390,8 @@ ipcMain.handle(IPC.OPENCODE_CONVERSATIONS_LIST, async () => {
     let cntStdout2 = '';
     try {
       cntStdout2 = await runOpencodeTracked(['db', 'SELECT session_id, COUNT(*) as message_count FROM message GROUP BY session_id']);
-      console.log('[OpencodeTools] batch count raw:', cntStdout2.slice(0, 500));
+      console.log('[OpencodeTools] batch count raw (first 2000):', cntStdout2.slice(0, 2000));
+      console.log('[OpencodeTools] first session ID sample:', sessions[0]?.id);
       const rows = JSON.parse(cntStdout2);
       if (Array.isArray(rows)) {
         for (const row of rows) {
@@ -424,6 +425,7 @@ ipcMain.handle(IPC.OPENCODE_CONVERSATIONS_LIST, async () => {
 ipcMain.handle(IPC.OPENCODE_CONVERSATION_MESSAGES, async (_event, conversationId: string, _projectPath: string) => {
   try {
     const stdout = await runOpencodeTracked(['db', `SELECT m.id, m.time_created, m.data FROM message m WHERE m.session_id='${conversationId.replace(/'/g, "''")}' ORDER BY m.time_created`]);
+    console.log('[OpencodeTools] messages raw (first 1000):', stdout.slice(0, 1000));
     const lines = stdout.trim().split('\n').filter(Boolean);
     const messages: Array<{ role: string; content: string; timestamp: string }> = [];
 
