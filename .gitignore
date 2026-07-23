@@ -7,7 +7,7 @@ yarn-error.log*
 # Build outputs
 dist/
 dist-electron/
-release/
+release/win-unpacked/
 release_new/
 D:/mlx_build/
 D:/mlx_portable/
