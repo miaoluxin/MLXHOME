@@ -1,5 +1,5 @@
 import { VscNewFile, VscNewFolder, VscEdit, VscTrash, VscCopy, VscFolderOpened, VscFile, VscRefresh } from 'react-icons/vsc';
-import { useState, useEffect, useCallback, useRef, memo } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileRow } from './FileRow';
 import { ContextMenu, type ContextMenuItem } from './ContextMenu';
@@ -36,64 +36,6 @@ function canOpenAsText(entry: FileEntry): boolean {
   if (BINARY_EXTENSIONS.has(entry.extension)) return false;
   return true;
 }
-
-interface FileRowWrapperProps {
-  entry: FileEntry;
-  depth: number;
-  isExpanded: boolean;
-  childrenEntries: FileEntry[];
-  isSelected: boolean;
-  editing: boolean;
-  handleRenameCommit: (oldPath: string, newName: string) => Promise<void>;
-  handleRenameCancel: () => void;
-  handleClick: (entry: FileEntry) => void;
-  handleDoubleClick: (entry: FileEntry) => Promise<void>;
-  handleContextMenu: (e: React.MouseEvent, entry: FileEntry) => void;
-  renderEntry: (entry: FileEntry, depth: number) => React.ReactNode;
-}
-
-const FileRowWrapper = memo(function FileRowWrapper({
-  entry, depth, isExpanded, childrenEntries, isSelected, editing,
-  handleRenameCommit, handleRenameCancel, handleClick, handleDoubleClick,
-  handleContextMenu, renderEntry,
-}: FileRowWrapperProps) {
-  const onRenameCommit = useCallback((newName: string) => {
-    handleRenameCommit(entry.path, newName);
-  }, [entry.path, handleRenameCommit]);
-  const onClick = useCallback(() => handleClick(entry), [entry, handleClick]);
-  const onDoubleClick = useCallback(() => handleDoubleClick(entry), [entry, handleDoubleClick]);
-  const onContextMenu = useCallback((e: React.MouseEvent) => handleContextMenu(e, entry), [entry, handleContextMenu]);
-
-  return (
-    <div>
-      <div style={{ paddingLeft: depth * 16 }}>
-        <FileRow
-          entry={entry}
-          isSelected={isSelected}
-          editing={editing}
-          onRenameCommit={onRenameCommit}
-          onRenameCancel={handleRenameCancel}
-          onClick={onClick}
-          onDoubleClick={onDoubleClick}
-          onContextMenu={onContextMenu}
-        />
-      </div>
-      <AnimatePresence>
-        {entry.isDirectory && isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            style={{ overflow: 'hidden' }}
-          >
-            {childrenEntries.map((child) => renderEntry(child, depth + 1))}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-});
 
 export function FileTree({ rootPath }: Props) {
   const { currentPath, entries, selectedPath, setCurrentPath, setEntries, setLoading, setSelectedPath, refreshTrigger, triggerRefresh } =
@@ -462,20 +404,33 @@ export function FileTree({ rootPath }: Props) {
     const children = childEntries.get(entry.path) || [];
 
     return (
-      <FileRowWrapper key={entry.path}
-        entry={entry}
-        depth={depth}
-        isExpanded={isExpanded}
-        childrenEntries={children}
-        isSelected={selectedPath === entry.path}
-        editing={editingPath === entry.path}
-        handleRenameCommit={handleRenameCommit}
-        handleRenameCancel={handleRenameCancel}
-        handleClick={handleClick}
-        handleDoubleClick={handleDoubleClick}
-        handleContextMenu={handleContextMenu}
-        renderEntry={renderEntry}
-      />
+      <div key={entry.path}>
+        <div style={{ paddingLeft: depth * 16 }}>
+          <FileRow
+            entry={entry}
+            isSelected={selectedPath === entry.path}
+            editing={editingPath === entry.path}
+            onRenameCommit={(newName) => handleRenameCommit(entry.path, newName)}
+            onRenameCancel={handleRenameCancel}
+            onClick={() => handleClick(entry)}
+            onDoubleClick={() => handleDoubleClick(entry)}
+            onContextMenu={handleContextMenu}
+          />
+        </div>
+        <AnimatePresence>
+          {entry.isDirectory && isExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              style={{ overflow: 'hidden' }}
+            >
+              {children.map((child) => renderEntry(child, depth + 1))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     );
   };
 
