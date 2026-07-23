@@ -12,7 +12,6 @@ interface Props {
   onClose: () => void;
 }
 
-// 判断 pathA 是否是 pathB 的祖先目录
 function isAncestorOrSelf(parent: string, child: string): boolean {
   const a = parent.replace(/\\/g, '/').replace(/\/$/, '');
   const b = child.replace(/\\/g, '/').replace(/\/$/, '');
@@ -26,7 +25,6 @@ export function IndexSettings({ onClose }: Props) {
   const [children, setChildren] = useState<Map<string, DirEntry[]>>(new Map());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [reindexing, setReindexing] = useState(false);
 
   useEffect(() => {
     window.electronAPI.fs.listDrives().then((list: string[]) => {
@@ -58,50 +56,20 @@ export function IndexSettings({ onClose }: Props) {
     setExpanded(next);
   };
 
-  // 递归展开并收集 path 下的所有子目录（用于选中/取消时连带操作）
-  const collectDescendants = async (dirPath: string): Promise<string[]> => {
-    const result: string[] = [dirPath];
-    try {
-      const list = await window.electronAPI.fs.list(dirPath);
-      const subdirs = list.filter(e => e.isDirectory);
-      for (const sub of subdirs) {
-        const deeper = await collectDescendants(sub.path);
-        result.push(...deeper);
-      }
-      // 缓存 children
-      setChildren(prev => {
-        if (prev.has(dirPath)) return prev;
-        const next = new Map(prev);
-        next.set(dirPath, subdirs);
-        return next;
-      });
-    } catch { /* ignore */ }
-    return result;
-  };
-
-  const toggleSelect = async (path: string) => {
+  const toggleSelect = (path: string) => {
     const next = new Set(selected);
     if (next.has(path)) {
-      // 取消选中：同时删除所有子孙目录
-      const toRemove: string[] = [];
-      for (const s of next) {
-        if (isAncestorOrSelf(path, s)) toRemove.push(s);
-      }
-      toRemove.forEach(s => next.delete(s));
+      next.delete(path);
     } else {
-      // 选中：添加该目录及所有子孙目录
-      const descendants = await collectDescendants(path);
-      descendants.forEach(d => next.add(d));
+      next.add(path);
     }
     setSelected(next);
   };
 
-  const handleSave = async () => {
-    const newRoots = Array.from(selected);
-    setRoots(newRoots);
+  const handleSave = () => {
+    setRoots(Array.from(selected));
     onClose();
-    // 触发重建索引（传递新 roots），不等待完成
-    window.electronAPI.fileIndexer.reindex(newRoots).catch((err: any) => {
+    window.electronAPI.fileIndexer.reindex(Array.from(selected)).catch((err: any) => {
       console.error('[IndexSettings] 重建索引失败:', err);
     });
   };
@@ -149,7 +117,7 @@ export function IndexSettings({ onClose }: Props) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-2">
-          <div className="text-[10px] text-text-tertiary mb-2 px-2">勾选要索引的目录（展开后可选子目录，选中父目录自动连带子目录）</div>
+          <div className="text-[10px] text-text-tertiary mb-2 px-2">勾选要索引的目录（父目录被勾选时自动包含所有子目录）</div>
           {drives.length === 0 ? (
             <div className="text-xs text-text-tertiary text-center py-4">加载中...</div>
           ) : (
@@ -157,16 +125,12 @@ export function IndexSettings({ onClose }: Props) {
           )}
         </div>
 
-        <div className="flex items-center justify-between px-4 py-3 border-t border-border-subtle bg-bg-deep">
-          <span className="text-[10px] text-text-tertiary">已选 {selected.size} 个目录</span>
-          <div className="flex gap-2">
-            <button onClick={onClose} className="px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors">取消</button>
-            <button onClick={handleSave} disabled={reindexing}
-              className="px-4 py-1.5 text-xs bg-accent text-white rounded hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-wait flex items-center gap-1">
-              {reindexing && <VscRefresh size={12} className="animate-spin" />}
-              应用{reindexing ? '中...' : ''}
-            </button>
-          </div>
+        <div className="flex items-center justify-end px-4 py-3 border-t border-border-subtle bg-bg-deep gap-2">
+          <button onClick={onClose} className="px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary transition-colors">取消</button>
+          <button onClick={handleSave}
+            className="px-4 py-1.5 text-xs bg-accent text-white rounded hover:bg-accent-hover transition-colors">
+            应用并重建索引
+          </button>
         </div>
       </div>
     </div>

@@ -15,6 +15,7 @@
 - ClearInlineColors now covers terminal color variables
 
 ### Fixed
+- IndexSettings checkbox 卡顿：移除递归 `collectDescendants`，勾选改为纯同步 Set 操作
 - Theme colors not saving when applying on built-in themes
 - Theme colors lost after switching away and back
 - EverythingSearch settings button missing from packaged build
