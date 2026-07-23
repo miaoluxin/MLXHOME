@@ -1,4 +1,4 @@
-# MLX Forge — Quick Start Guide
+# MLX — Quick Start Guide
 
 ## Prerequisites
 
@@ -10,8 +10,8 @@
 
 ## Option 1: Download Portable Executable (Recommended)
 
-1. Go to the [Releases page](https://github.com/mlxforge/MLX-Forge/releases)
-2. Download `mlxforge-1.0.0-portable.exe`
+1. Go to the [Releases page](https://github.com/miaoluxin/MLXHOME/releases)
+2. Download `mlx-1.0.0-portable.exe`
 3. Double-click to run — no installation required
 
 ## Option 2: Build from Source
@@ -23,8 +23,8 @@ Download and install Node.js 20+ from [nodejs.org](https://nodejs.org/).
 ### Step 2: Clone and Install
 
 ```bash
-git clone https://github.com/mlxforge/MLX-Forge.git
-cd MLX-Forge
+git clone https://github.com/miaoluxin/MLXHOME.git
+cd MLX_Tool_Git
 npm install
 ```
 
@@ -39,15 +39,14 @@ This starts the Vite dev server with hot reload for both the main process and re
 ### Step 4: Build for Production
 
 ```bash
-npm run build              # Compile TypeScript + Vite build
-npx electron-builder --win # Package as portable exe
+npm run electron:build:win
 ```
 
-Output: `release\mlxforge-1.0.0-portable.exe`
+Output: `release\mlx-1.0.0-portable.exe`
 
 ## First Launch
 
-1. Launch MLX Forge
+1. Launch MLX
 2. Select a project folder (this is where your code lives)
 3. The terminal will automatically start `opencode` and `claude`
 4. Press `Ctrl+Shift+/` to view all keyboard shortcuts

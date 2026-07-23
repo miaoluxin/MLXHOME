@@ -1,4 +1,4 @@
-# MLX Forge — Development Guide / 二次开发指南
+# MLX — Development Guide / 二次开发指南
 
 ## Project Structure / 项目结构
 

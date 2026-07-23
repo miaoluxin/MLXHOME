@@ -1,10 +1,10 @@
-# ClaudeForge 开发日志
+# MLX 开发日志
 
 ## 项目概述
 
-**ClaudeForge** — Windows 暗黑主题 AI IDE，内嵌 PowerShell + Claude CLI 终端、CodeMirror 6 代码编辑器（替代 Monaco）、文件浏览器。Apple 风格极简设计，Framer Motion 丝滑动效。
+**MLX** — Windows 暗黑主题 AI IDE，内嵌 PowerShell + Opencode/Claude CLI 终端、CodeMirror 6 代码编辑器、文件浏览器。Apple 风格极简设计，Framer Motion 丝滑动效。
 
-- 项目路径: `D:\ClaudeProjectFolder\claudeforge\`
+- 项目路径: `D:\ProjectFolder\MLX_Tool_Git\`
 - 技术栈: Electron + React 19 + TypeScript + Vite
 - 当前版本: v1.0.0
 
@@ -31,10 +31,10 @@
 ## 项目结构
 
 ```
-claudeforge/
+MLX_Tool_Git/
 ├── package.json                    # 依赖和脚本
 ├── vite.config.ts                  # Vite + Electron 插件配置
-├── electron-builder.yml            # 打包配置（NSIS/portable）
+├── electron-builder.yml            # 打包配置（portable）
 ├── tailwind.config.js              # Tailwind 暗黑主题色
 ├── index.html                      # 入口 HTML
 ├── src/
@@ -56,8 +56,8 @@ claudeforge/
 │   │   ├── components/
 │   │   │   ├── layout/             # AppShell, PanelResizer
 │   │   │   ├── terminal/           # TerminalPanel, XTerm, TerminalTabs
-│   │   │   ├── editor/             # EditorPanel, MonacoEditor, EditorTabs
-│   │   │   ├── filesystem/         # FileBrowser, AddressBar, FileTree, FileRow, FavoritesButton
+│   │   │   ├── editor/             # EditorPanel, NddEditor, EditorTabs
+│   │   │   ├── filesystem/         # FileBrowser, FileTree, FileRow, FavoritesButton
 │   │   │   └── onboarding/         # FolderPicker（首次引导）
 │   │   ├── stores/                 # Zustand 状态管理
 │   │   │   ├── useProjectStore.ts  # 项目路径、引导状态
@@ -134,16 +134,13 @@ claudeforge/
 
 ```bash
 # 开发模式（热重载）
-cd D:\ClaudeProjectFolder\claudeforge
+cd MLX_Tool_Git
 npm run dev
 
 # 生产构建
-npm run build          # 仅 Vite 构建
-npm run electron:build:win  # 完整打包（含 NSIS 安装器）
+npm run electron:build:win  # 完整打包为便携版 exe
 
-# 当前环境打包（跳过签名）
-ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/ npx electron-builder --win --dir
-# 产物: release/win-unpacked/ClaudeForge.exe
+# 产物: release/mlx-1.0.0-portable.exe
 ```
 
 ---
@@ -481,16 +478,15 @@ productName: MLX
 win:
   target: [portable]   # x64 便携版
   sign: false
-nsis:
-  oneClick: false
-  allowToChangeInstallationDirectory: true
-打包命令: npx electron-builder --win --dir
-产物: release/win-unpacked/MLX.exe
+portable:
+  artifactName: mlx-${version}-portable.exe
+打包命令: npm run electron:build:win
+产物: release/mlx-${version}-portable.exe
 ```
 
 ### sessionManager 持久化
 
-`services/sessionManager.ts` 使用 `electron-store` 键 `claude-forge-session` 持久化：
+`services/sessionManager.ts` 使用 `localStorage` 键 `mlx-session` 持久化：
 - `openFiles[]`, `activeFileId`, `cursorPosition`, `zoomLevel`, `wordWrap`
 - `fileBrowserPath`, `layoutWidths`
 - 触发时机：内容变更 3s 防抖 + `beforeunload` 事件
@@ -514,8 +510,8 @@ nsis:
 
 **修复命令**（按顺序）：
 ```bash
-npm run build                    # 先构建 dist-electron + dist
-npx electron-builder --win --dir # 再打包到 release/win-unpacked
+npm run electron:build:win       # 构建 + 打包为便携版 exe
+# 产物: release/mlx-{version}-portable.exe
 ```
 
 **教训**：

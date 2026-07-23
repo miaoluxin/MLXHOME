@@ -1,6 +1,6 @@
-# MLX Forge
+# MLX
 
-**Make. Learn. eXtraordinary.** — An AI-powered Windows desktop IDE with integrated terminal, code editor, file manager, conversation history, and prompt management.
+**Make. Learn. eXtraordinary.** — AI 驱动的 Windows 桌面 IDE，集成双终端、代码编辑器、文件管理、对话管理和提示词管理。
 
 ![Electron](https://img.shields.io/badge/Electron-43-blue) ![React](https://img.shields.io/badge/React-19-61DAFB) ![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6) ![Vite](https://img.shields.io/badge/Vite-6-646CFF) ![License](https://img.shields.io/badge/License-MIT-green)
 
@@ -25,22 +25,21 @@
 
 ### Download & Run
 
-Download the latest portable executable from the [Releases](https://github.com/mlxforge/MLX-Forge/releases) page, double-click to run — no installation required.
+Download the latest portable executable from the [Releases](https://github.com/miaoluxin/MLXHOME/releases) page, double-click to run — no installation required.
 
 ### Build from Source
 
 ```bash
 # Prerequisites: Node.js 20+, Git
 
-git clone https://github.com/mlxforge/MLX-Forge.git
-cd MLX-Forge
+git clone https://github.com/miaoluxin/MLXHOME.git
+cd MLX_Tool_Git
 
 npm install
-npm run build
-npx electron-builder --win
+npm run electron:build:win
 ```
 
-The portable executable will be at `release\mlxforge-1.0.0-portable.exe`.
+The portable executable will be at `release\mlx-1.0.0-portable.exe`.
 
 ### Development Mode
 

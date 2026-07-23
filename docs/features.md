@@ -1,8 +1,8 @@
-# MLX Forge — Feature Guide
+# MLX — Feature Guide
 
 ```mermaid
 mindmap
-  MLX Forge
+  MLX
     Terminal
       Dual PTY shell
       Opencode + Claude

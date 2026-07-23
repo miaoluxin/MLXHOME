@@ -1,6 +1,6 @@
-# Contributing to MLX Forge
+# Contributing to MLX
 
-Thank you for considering contributing to MLX Forge! Here's how you can help.
+Thank you for considering contributing to MLX! Here's how you can help.
 
 ## Code of Conduct
 
@@ -12,7 +12,7 @@ Be respectful, constructive, and collaborative. Harassment or offensive behavior
 
 1. Check existing issues to avoid duplicates
 2. Use the bug report template (`.github/ISSUE_TEMPLATE/bug_report.md`)
-3. Include: OS version, MLX Forge version, steps to reproduce, expected vs actual behavior, screenshots if applicable
+3. Include: OS version, MLX version, steps to reproduce, expected vs actual behavior, screenshots if applicable
 
 ### Suggesting Features
 
@@ -32,8 +32,8 @@ Be respectful, constructive, and collaborative. Harassment or offensive behavior
 ## Development Setup
 
 ```bash
-git clone https://github.com/mlxforge/MLX-Forge.git
-cd MLX-Forge
+git clone https://github.com/miaoluxin/MLXHOME.git
+cd MLX_Tool_Git
 npm install
 npm run dev   # development mode with hot reload
 ```

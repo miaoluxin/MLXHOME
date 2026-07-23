@@ -1,4 +1,4 @@
-# MLX Forge Architecture
+# MLX Architecture
 
 ## System Architecture
 
@@ -33,7 +33,7 @@ graph TB
 
 ## Process Model
 
-MLX Forge follows the standard Electron security model:
+MLX follows the standard Electron security model:
 
 | Layer | Process | Responsibilities |
 |-------|---------|-----------------|

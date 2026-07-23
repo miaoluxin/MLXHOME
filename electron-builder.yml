@@ -28,7 +28,7 @@ win:
   sign: false
 
 portable:
-  artifactName: ${name}-${version}-portable.exe
+  artifactName: mlx-${version}-portable.exe
 
 nsis:
   oneClick: false

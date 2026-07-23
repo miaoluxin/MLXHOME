@@ -1,8 +1,8 @@
-# MLX Forge — 功能指南
+# MLX — 功能指南
 
 ```mermaid
 mindmap
-  MLX Forge
+  MLX
     终端系统
       双 PTY Shell
       Opencode + Claude
