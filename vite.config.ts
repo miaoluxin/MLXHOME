@@ -1,0 +1,54 @@
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import electron from 'vite-plugin-electron';
+import renderer from 'vite-plugin-electron-renderer';
+import path from 'path';
+
+export default defineConfig({
+  plugins: [
+    react(),
+    electron([
+      {
+        entry: 'src/main/main.ts',
+        vite: {
+          build: {
+            outDir: 'dist-electron',
+            rollupOptions: {
+              external: ['electron', '@lydell/node-pty', 'chokidar', 'electron-store'],
+            },
+          },
+        },
+      },
+      {
+        entry: 'src/preload/preload.ts',
+        onstart(args) {
+          args.reload();
+        },
+        vite: {
+          build: {
+            outDir: 'dist-electron',
+          },
+        },
+      },
+    ]),
+    renderer(),
+  ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src/renderer'),
+      '@shared': path.resolve(__dirname, 'src/shared'),
+    },
+  },
+  build: {
+    outDir: 'dist',
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-codemirror': ['codemirror', '@codemirror/view', '@codemirror/state', '@codemirror/language'],
+          'vendor-motion': ['framer-motion'],
+        },
+      },
+    },
+  },
+});

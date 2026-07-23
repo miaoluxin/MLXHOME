@@ -1,0 +1,40 @@
+appId: com.mlx.app
+productName: MLX
+copyright: Copyright 2026 MLX
+artifactName: ${name}-${version}-setup.${ext}
+
+directories:
+  output: release
+
+files:
+  - dist/**/*
+  - dist-electron/**/*
+  - node_modules/**/*
+  - "!node_modules/**/*.{md,ts,map,js.map,tsx,tsbuildinfo}"
+  - "!node_modules/**/test/**"
+  - "!node_modules/**/docs/**"
+  - "!node_modules/**/example/**"
+  - "!node_modules/**/examples/**"
+
+# 只保留中英文语言包，节省 ~46MB
+electronLanguages:
+  - zh-CN
+  - en-US
+
+win:
+  target:
+    - target: portable
+      arch: [x64]
+  sign: false
+
+portable:
+  artifactName: ${name}-${version}-portable.exe
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  uninstallDisplayName: MLX
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: MLX

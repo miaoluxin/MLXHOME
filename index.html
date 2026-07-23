@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MLX — Make! Learn! Extraordinary!</title>
+    <!-- 启动时读取保存的主题，避免与默认暗色主题闪烁不一致 -->
+    <script>
+      (function() {
+        try {
+          var theme = localStorage.getItem('mlx-theme');
+          if (theme === 'light') document.documentElement.dataset.theme = 'light';
+          else if (theme === 'high-contrast') document.documentElement.dataset.theme = 'high-contrast';
+          // dark is default (no data-theme needed — :root handles it)
+        } catch(e) {}
+      })();
+    </script>
+    <!-- 内联 CSS 变量 + 样式：在 Vite/Tailwind 加载前提供正确主题背景，避免白屏。
+         使用 CSS 变量而非硬编码颜色值，确保 React 加载后 useThemeStore 覆盖变量时
+         所有元素（包括 FolderPicker 欢迎页）同步变色，不会出现内外主题不一致。 -->
+    <style>
+      :root {
+        --bg-deepest: #1a1b26;
+        --bg-deep: #1f2335;
+        --bg-base: #24283b;
+        --bg-raised: #292e42;
+        --bg-hover: #343a52;
+        --text-primary: #c0caf5;
+        --text-secondary: #787c99;
+        --text-tertiary: #565f89;
+        --accent: #7aa2f7;
+        --accent-hover: #89b4fa;
+        --border-subtle: rgba(192, 202, 245, 0.08);
+        --border-hover: rgba(192, 202, 245, 0.14);
+        --glass-bg: rgba(26, 27, 38, 0.85);
+        --glass-blur: 20px;
+        --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+        --scrollbar-thumb: rgba(192, 202, 245, 0.12);
+        --scrollbar-thumb-hover: rgba(192, 202, 245, 0.22);
+        --window-bg: #1a1b26;
+      }
+      html, body, #root {
+        background: var(--bg-deepest);
+        color: var(--text-primary);
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+        font-family: 'Segoe UI', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+      }
+    </style>
+  </head>
+  <body class="bg-bg-deepest text-text-primary overflow-hidden">
+    <div id="root"></div>
+    <script type="module" src="/src/renderer/main.tsx"></script>
+  </body>
+</html>

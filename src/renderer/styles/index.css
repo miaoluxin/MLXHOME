@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════
+   Theme System — 3 built-in themes using CSS custom properties
+   (Custom themes apply variables directly via JS)
+   ═══════════════════════════════════════════════════════ */
+
+/* ── 暗黑主题 (默认) — Tokyo Night 风格 ── */
+:root, [data-theme="dark"] {
+  --bg-deepest: #1a1b26;
+  --bg-deep: #1f2335;
+  --bg-base: #24283b;
+  --bg-raised: #292e42;
+  --bg-hover: #343a52;
+  --text-primary: #c0caf5;
+  --text-secondary: #787c99;
+  --text-tertiary: #565f89;
+  --accent: #7aa2f7;
+  --accent-hover: #89b4fa;
+  --border-subtle: rgba(192, 202, 245, 0.08);
+  --border-hover: rgba(192, 202, 245, 0.14);
+  --glass-bg: rgba(26, 27, 38, 0.85);
+  --glass-blur: 20px;
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --scrollbar-thumb: rgba(192, 202, 245, 0.12);
+  --scrollbar-thumb-hover: rgba(192, 202, 245, 0.22);
+  --window-bg: #1a1b26;
+}
+
+/* ── 白黑主题 — GitHub Light 风格 ── */
+[data-theme="light"] {
+  --bg-deepest: #ffffff;
+  --bg-deep: #f6f8fa;
+  --bg-base: #eaeef2;
+  --bg-raised: #ffffff;
+  --bg-hover: #d0d7de;
+  --text-primary: #0d0d0d;
+  --text-secondary: #333333;
+  --text-tertiary: #555555;
+  --accent: #0550ae;
+  --accent-hover: #0969da;
+  --border-subtle: rgba(0, 0, 0, 0.08);
+  --border-hover: rgba(0, 0, 0, 0.16);
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --glass-blur: 20px;
+  --glass-shadow: 0 2px 12px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(0, 0, 0, 0.02);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.25);
+  --window-bg: #ffffff;
+}
+
+/* ── 高对比度科技感 — 深蓝底色 + 霓虹青accent ── */
+[data-theme="high-contrast"] {
+  --bg-deepest: #0a1628;
+  --bg-deep: #0f1d35;
+  --bg-base: #152340;
+  --bg-raised: #1a2d4a;
+  --bg-hover: #253d5f;
+  --text-primary: #ffffff;
+  --text-secondary: #b8cce0;
+  --text-tertiary: #6a85a8;
+  --accent: #00e5ff;
+  --accent-hover: #40ffff;
+  --border-subtle: rgba(0, 229, 255, 0.15);
+  --border-hover: rgba(0, 229, 255, 0.30);
+  --glass-bg: rgba(10, 22, 40, 0.92);
+  --glass-blur: 20px;
+  --glass-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(0, 229, 255, 0.05);
+  --scrollbar-thumb: rgba(0, 229, 255, 0.15);
+  --scrollbar-thumb-hover: rgba(0, 229, 255, 0.28);
+  --window-bg: #0a1628;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background: var(--bg-deepest);
+  color: var(--text-primary);
+  font-family: 'Segoe UI', 'SF Pro Display', system-ui, -apple-system, sans-serif;
+}
+
+#root {
+  opacity: var(--global-opacity, 1);
+  transition: opacity 200ms ease;
+}
+
+/* 玻璃拟态面板 */
+.glass-panel {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(180%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  box-shadow: var(--glass-shadow);
+  transition: border-color 200ms ease, background-color 200ms ease;
+}
+
+.glass-panel:hover {
+  border-color: var(--border-hover);
+}
+
+/* 自定义滚动条 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+/* 标题栏拖拽区域 */
+.titlebar-drag {
+  -webkit-app-region: drag;
+}
+
+.titlebar-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* xterm 覆盖 */
+.xterm {
+  padding: 8px;
+  height: 100%;
+}
+
+.xterm-viewport {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+/* CodeMirror 覆盖 */
+.cm-editor-wrapper {
+  height: 100%;
+  overflow: hidden;
+}
+.cm-editor-wrapper .cm-editor {
+  height: 100%;
+}
+.cm-editor-wrapper .cm-scroller {
+  overflow: auto;
+}
+
+/* Framer Motion 布局动画 */
+.panel-animated {
+  will-change: width;
+}
+
+/* 面板宽度即时跟随（拖拽 resize 时用 CSS transition，替代 spring） */
+.panel-slot {
+  transition: width 0.05s ease-out;
+}
+
+/* 文件行悬停 */
+.file-row:hover {
+  background: var(--bg-hover);
+}
+
+.file-row {
+  transition: background 120ms ease;
+}
+
+/* 列模式十字光标 */
+.cm-column-mode .cm-cursor {
+  cursor: crosshair !important;
+}
+.cm-column-mode .cm-selectionBackground {
+  opacity: 0.3 !important;
+  mix-blend-mode: normal;
+}
+
+/* 显示空白字符 — 空格 · 制表符 → 换行符 ¶ */
+.cm-ws-space,
+.cm-ws-tab,
+.cm-ws-newline {
+  opacity: 0.35;
+  user-select: none;
+  pointer-events: none;
+  font-variant: normal;
+  letter-spacing: 0;
+}
+.cm-ws-newline {
+  opacity: 0.3;
+}
