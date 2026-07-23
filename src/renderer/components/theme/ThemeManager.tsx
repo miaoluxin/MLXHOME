@@ -166,6 +166,20 @@ export function ThemeManager({ onClose }: Props) {
 
   // 应用选中的主题
   const handleApply = () => {
+    if (!isBuiltIn) {
+      const newTheme: CustomTheme = {
+        id: selectedId,
+        name: editingName || '未命名',
+        colors: { ...editingColors },
+        fontSize: { ...editingFontSize },
+      };
+      if (isNew) {
+        addCustomTheme(newTheme);
+        setIsNew(false);
+      } else {
+        updateCustomTheme(newTheme);
+      }
+    }
     setTheme(selectedId);
     onClose();
   };
