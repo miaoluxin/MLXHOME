@@ -6,7 +6,6 @@ import { app } from 'electron';
 import chokidar, { FSWatcher } from 'chokidar';
 import type { SearchResult } from '../../shared/types';
 
-// ── 内部索引条目 ──
 interface IndexedEntry {
   path: string;
   name: string;
@@ -15,7 +14,6 @@ interface IndexedEntry {
   isDirectory: boolean;
 }
 
-// ── 序列化快照格式 ──
 interface IndexSnapshot {
   version: number;
   timestamp: number;
@@ -23,13 +21,16 @@ interface IndexSnapshot {
 }
 
 const INDEX_VERSION = 2;
-
 const MAX_ENTRIES = 300000;
+const MAX_DEPTH = 10;
+const BATCH_SIZE = 50;
+const YIELD_INTERVAL = 10;
 
-// ── 跳过的系统目录 ──
 const SKIP_DIRS = new Set([
-  'Windows', 'Program Files', 'Program Files (x86)', 'ProgramData',
+  'Windows', 'WindowsApps', 'Windows.old',
+  'Program Files', 'Program Files (x86)', 'ProgramData',
   '$Recycle.Bin', 'System Volume Information', 'Recovery',
+  'PerfLogs', 'MSOCache', 'Intel', 'AMD', 'NVIDIA',
   'node_modules', '.git', '.svn', '.hg', '__pycache__',
   'AppData', 'build', 'dist', 'target', 'out', 'bin', 'obj',
   'vendor', 'bower_components', '.cache', 'tmp', 'temp',
@@ -53,34 +54,31 @@ function formatDate(mtime: number): string {
   return `${y}-${mo}-${day} ${h}:${mi}`;
 }
 
+function yieldToEventLoop(): Promise<void> {
+  return new Promise(resolve => setImmediate(resolve));
+}
+
 export class FileIndexer {
-  // ── 索引数据 ──
   private nameIndex = new Map<string, IndexedEntry[]>();
   private pathIndex = new Map<string, IndexedEntry>();
-  private driveRoots: string[] = [];
+  private savedDriveRoots: string[] = [];
 
-  // ── 状态 ──
   private _isReady = false;
   private _isScanning = false;
   private indexedCount = 0;
+  private abortScan = false;
 
-  // ── 文件监听 ──
   private watcher: FSWatcher | null = null;
-
-  // ── 持久化 ──
   private saveTimer: ReturnType<typeof setInterval> | null = null;
   private lastSaveTime = 0;
 
-  // ── 事件回调 ──
   private progressCb: ((data: { indexed: number; estimatedTotal: number }) => void) | null = null;
   private readyCb: (() => void) | null = null;
   private errorCb: ((err: string) => void) | null = null;
 
-  // ── 公共访问器 ──
   get isReady() { return this._isReady; }
   get isScanning() { return this._isScanning; }
 
-  // ── 事件注册 ──
   onProgress(cb: (data: { indexed: number; estimatedTotal: number }) => void) { this.progressCb = cb; }
   onReady(cb: () => void) { this.readyCb = cb; }
   onError(cb: (err: string) => void) { this.errorCb = cb; }
@@ -89,31 +87,21 @@ export class FileIndexer {
     return path.join(app.getPath('userData'), 'mlx-file-index.dat');
   }
 
-  // ═══════════════════════════════════════
-  //  启动
-  // ═══════════════════════════════════════
   async start(roots?: string[]): Promise<void> {
-    // 1) 尝试从磁盘加载缓存
     if (this.loadIndex()) {
       this._isReady = true;
       this.readyCb?.();
       this.startWatching();
-      this.startBackgroundRefresh();
       return;
     }
-
-    // 2) 无缓存 → 扫描指定目录，未指定时只扫家目录
-    this.driveRoots = roots && roots.length > 0 ? roots : [];
-    if (this.driveRoots.length === 0) {
+    this.savedDriveRoots = roots && roots.length > 0 ? roots : [];
+    if (this.savedDriveRoots.length === 0) {
       const home = process.env.USERPROFILE || os.homedir();
-      if (home) this.driveRoots = [home];
+      if (home) this.savedDriveRoots = [home];
     }
     await this.fullScan();
   }
 
-  // ═══════════════════════════════════════
-  //  搜索（同步，毫秒级）
-  // ═══════════════════════════════════════
   search(query: string, maxResults = 500): SearchResult[] {
     if (!query || !query.trim()) return [];
     if (!this._isReady && !this._isScanning) return [];
@@ -122,7 +110,7 @@ export class FileIndexer {
     const scored: Array<{
       result: SearchResult;
       mtime: number;
-      score: number; // 0=精确 1=前缀 2=子串
+      score: number;
     }> = [];
 
     for (const [name, entries] of this.nameIndex) {
@@ -150,7 +138,6 @@ export class FileIndexer {
       if (scored.length >= maxResults * 2) break;
     }
 
-    // 排序：分数优先 → 时间优先
     scored.sort((a, b) => {
       if (a.score !== b.score) return a.score - b.score;
       return b.mtime - a.mtime;
@@ -159,9 +146,6 @@ export class FileIndexer {
     return scored.slice(0, maxResults).map(r => r.result);
   }
 
-  // ═══════════════════════════════════════
-  //  状态
-  // ═══════════════════════════════════════
   getStatus() {
     return {
       isReady: this._isReady,
@@ -170,12 +154,17 @@ export class FileIndexer {
     };
   }
 
-  async reindex(): Promise<void> {
+  async reindex(roots?: string[]): Promise<void> {
+    this.abortScan = true;
     this.stop();
     this.nameIndex.clear();
     this.pathIndex.clear();
     this.indexedCount = 0;
     this._isReady = false;
+    this.abortScan = false;
+    if (roots && roots.length > 0) {
+      this.savedDriveRoots = roots;
+    }
     await this.fullScan();
   }
 
@@ -188,12 +177,9 @@ export class FileIndexer {
     }
     this._isReady = false;
     this._isScanning = false;
-    this.saveIndex(); // 关闭前保存
+    this.saveIndex();
   }
 
-  // ═══════════════════════════════════════
-  //  索引持久化
-  // ═══════════════════════════════════════
   private loadIndex(): boolean {
     try {
       const p = this.indexPath;
@@ -210,7 +196,7 @@ export class FileIndexer {
           this.pathIndex.set(e.path, e);
         }
       }
-      this.driveRoots = this.listDrives();
+      // 不重置 driveRoots — 保留 start() 中设置的值
       return this.indexedCount > 0;
     } catch {
       return false;
@@ -237,28 +223,27 @@ export class FileIndexer {
     }
   }
 
-  // ═══════════════════════════════════════
-  //  全量扫描
-  // ═══════════════════════════════════════
   private async fullScan(): Promise<void> {
     this._isScanning = true;
     this.nameIndex.clear();
     this.pathIndex.clear();
     this.indexedCount = 0;
-    this.driveRoots = this.listDrives();
 
-    // 每 30s 自动保存检查点
     this.saveTimer = setInterval(() => this.saveIndex(), 30000);
 
     try {
-      for (const drive of this.driveRoots) {
-        await this.scanDirectory(drive);
+      for (const root of this.savedDriveRoots) {
+        if (this.abortScan) break;
+        this.progressCb?.({ indexed: this.indexedCount, estimatedTotal: 0 });
+        await this.scanDirectory(root);
       }
 
-      this._isReady = true;
-      this.saveIndex();
-      this.startWatching();
-      this.readyCb?.();
+      if (!this.abortScan) {
+        this._isReady = true;
+        this.saveIndex();
+        this.startWatching();
+        this.readyCb?.();
+      }
     } catch (err: any) {
       this.errorCb?.(err?.message || '索引扫描失败');
     } finally {
@@ -274,10 +259,11 @@ export class FileIndexer {
     const stack: string[] = [rootDir];
     const depthMap = new Map<string, number>();
     depthMap.set(rootDir, 0);
-    const MAX_DEPTH = 15;
-    const BATCH_SIZE = 50;
+    let yieldCounter = 0;
 
     while (stack.length > 0) {
+      if (this.abortScan) return;
+
       const currentDir = stack.pop()!;
       const depth = depthMap.get(currentDir) ?? 0;
       if (depth >= MAX_DEPTH) continue;
@@ -290,6 +276,9 @@ export class FileIndexer {
       }
 
       for (let i = 0; i < names.length; i += BATCH_SIZE) {
+        if (this.abortScan) return;
+        if (this.indexedCount >= MAX_ENTRIES) return;
+
         const batch = names.slice(i, i + BATCH_SIZE);
         const stats = await Promise.all(
           batch.map(n =>
@@ -324,45 +313,24 @@ export class FileIndexer {
           else this.nameIndex.set(key, [entry]);
           this.pathIndex.set(fullPath, entry);
           this.indexedCount++;
-        }
 
-        if (this.indexedCount >= MAX_ENTRIES) break;
-
-        if (this.indexedCount % 1000 < BATCH_SIZE) {
-          this.progressCb?.({ indexed: this.indexedCount, estimatedTotal: 0 });
+          yieldCounter++;
+          if (yieldCounter % YIELD_INTERVAL === 0) {
+            this.progressCb?.({ indexed: this.indexedCount, estimatedTotal: 0 });
+          }
         }
+      }
+
+      if (yieldCounter % (YIELD_INTERVAL * 5) === 0) {
+        await yieldToEventLoop();
       }
     }
   }
 
-  // ═══════════════════════════════════════
-  //  后台刷新（加载缓存后，增量检测变更）
-  // ═══════════════════════════════════════
-  private async startBackgroundRefresh(): Promise<void> {
-    // 快速检查上次序列化之后是否有变化（只检查根目录修改时间）
-    for (const drive of this.driveRoots) {
-      try {
-        const stat = await fs.promises.stat(drive);
-        // 如果驱动器根目录的修改时间晚于索引保存时间 → 可能有新增/删除文件
-        // 这种情况下简单做一个目录级深度扫描（只查顶层变化）
-      } catch { /* skip */ }
-    }
-  }
-
-  // ═══════════════════════════════════════
-  //  文件监听（chokidar）
-  // ═══════════════════════════════════════
   private startWatching(): void {
-    // 只监听用户目录和项目常见位置，不监听系统盘根目录
     const watchDirs: string[] = [];
-
-    // 用户主目录
     const home = app.getPath('home');
-    if (home) {
-      watchDirs.push(home);
-    }
-
-    // 项目目录
+    if (home) watchDirs.push(home);
     try {
       const projectDir = app.getPath('documents');
       if (projectDir) watchDirs.push(projectDir);
@@ -430,25 +398,8 @@ export class FileIndexer {
         }).catch(() => {});
       });
   }
-
-  // ═══════════════════════════════════════
-  //  工具方法
-  // ═══════════════════════════════════════
-  private listDrives(): string[] {
-    const drives: string[] = [];
-    for (let i = 65; i <= 90; i++) {
-      const letter = String.fromCharCode(i);
-      const p = `${letter}:\\`;
-      try {
-        fs.accessSync(p, fs.constants.F_OK);
-        drives.push(p);
-      } catch { /* skip */ }
-    }
-    return drives;
-  }
 }
 
-// ── 单例 ──
 let instance: FileIndexer | null = null;
 
 export function getFileIndexer(): FileIndexer {

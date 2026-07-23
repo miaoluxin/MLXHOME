@@ -21,8 +21,8 @@ export function registerFileIndexerIpc(mainWindow: BrowserWindow): void {
   });
 
   // ── 重新索引 ──
-  ipcMain.handle(IPC.FILE_INDEXER_REINDEX, async () => {
-    await indexer.reindex();
+  ipcMain.handle(IPC.FILE_INDEXER_REINDEX, async (_event, roots?: string[]) => {
+    await indexer.reindex(roots);
   });
 
   // ── 进度事件转发 ──

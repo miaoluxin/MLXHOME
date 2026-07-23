@@ -292,10 +292,6 @@ export function EverythingSearch() {
           <VscSearch size={15} className="text-accent" />
           <span className="text-xs font-medium text-text-secondary">文件搜索</span>
         </div>
-        <button onClick={() => setShowSettings(true)}
-          className="w-6 h-6 flex items-center justify-center rounded hover:bg-bg-hover text-text-secondary hover:text-text-primary transition-colors" title="索引设置">
-          <VscSettingsGear size={14} />
-        </button>
         <button
           onClick={toggleEverythingSearch}
           className="w-6 h-6 flex items-center justify-center rounded hover:bg-red-500/20 text-text-secondary hover:text-red-400 transition-colors"
@@ -317,19 +313,25 @@ export function EverythingSearch() {
             onKeyDown={handleKeyDown}
             placeholder={isIndexReady ? "搜索文件名... (至少2字符)" : "索引加载中..."}
             disabled={indexLoading}
-            className="w-full bg-bg-raised border border-border-subtle rounded-md pl-8 pr-3 py-1.5
+            className="w-full bg-bg-raised border border-border-subtle rounded-md pl-8 pr-16 py-1.5
               text-xs text-text-primary placeholder-text-tertiary outline-none
               focus:border-accent transition-colors
               disabled:opacity-50 disabled:cursor-not-allowed"
           />
-          {query && (
-            <button
-              onClick={() => { setQuery(''); setResults([]); setHasSearched(false); setSelectedIdx(-1); inputRef.current?.focus(); }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary hover:text-text-primary"
-            >
-              <VscClose size={12} />
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+            <button onClick={() => setShowSettings(true)}
+              className="w-5 h-5 flex items-center justify-center rounded hover:bg-bg-hover text-text-tertiary hover:text-text-primary transition-colors" title="索引设置">
+              <VscSettingsGear size={12} />
             </button>
-          )}
+            {query && (
+              <button
+                onClick={() => { setQuery(''); setResults([]); setHasSearched(false); setSelectedIdx(-1); inputRef.current?.focus(); }}
+                className="w-5 h-5 flex items-center justify-center rounded hover:bg-bg-hover text-text-tertiary hover:text-text-primary transition-colors"
+              >
+                <VscClose size={12} />
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

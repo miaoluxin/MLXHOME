@@ -30,7 +30,7 @@ export interface ElectronAPI {
     search: (query: string) => Promise<SearchResult[]>;
     getStatus: () => Promise<IndexStatus>;
     start: (roots?: string[]) => Promise<void>;
-    reindex: () => Promise<void>;
+    reindex: (roots?: string[]) => Promise<void>;
     onProgress: (callback: (data: { indexed: number; estimatedTotal: number }) => void) => () => void;
     onReady: (callback: () => void) => () => void;
   };

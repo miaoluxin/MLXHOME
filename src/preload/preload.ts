@@ -41,7 +41,7 @@ const electronAPI = {
     search: (query: string) => ipcRenderer.invoke(IPC.FILE_INDEXER_SEARCH, query),
     getStatus: () => ipcRenderer.invoke(IPC.FILE_INDEXER_STATUS),
     start: () => ipcRenderer.invoke(IPC.FILE_INDEXER_START),
-    reindex: () => ipcRenderer.invoke(IPC.FILE_INDEXER_REINDEX),
+    reindex: (roots?: string[]) => ipcRenderer.invoke(IPC.FILE_INDEXER_REINDEX, roots),
     onProgress: (callback: (data: { indexed: number; estimatedTotal: number }) => void) => {
       const handler = (_event: any, data: any) => callback(data);
       ipcRenderer.on(IPC.FILE_INDEXER_PROGRESS, handler);

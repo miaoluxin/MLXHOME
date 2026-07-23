@@ -379,29 +379,37 @@ ipcMain.handle(IPC.CLAUDE_MCP_SAVE, async (_event, servers: Record<string, any>)
 
 // ── Opencode 对话子系统 ──
 
+// TSV 解析工具（opencode db 输出为 tab 分隔，首行是表头）
+function parseTSV(tsv: string): Record<string, string>[] {
+  const lines = tsv.trim().split('\n').filter(Boolean);
+  if (lines.length < 2) return [];
+  const header = lines[0].split('\t');
+  return lines.slice(1).map(line => {
+    const cols = line.split('\t');
+    const row: Record<string, string> = {};
+    header.forEach((h, i) => { row[h] = cols[i] || ''; });
+    return row;
+  });
+}
+
 ipcMain.handle(IPC.OPENCODE_CONVERSATIONS_LIST, async () => {
   try {
     const stdout = await runOpencodeTracked(['session', 'list', '--format', 'json', '--max-count', '200']);
     const sessions = JSON.parse(stdout);
     if (!Array.isArray(sessions)) return [];
 
-    // 批量查询所有 session 的消息数（替代 N+1）
+    // 批量查询所有 session 的消息数（opencode db 输出是 TSV 格式）
     const countMap = new Map<string, number>();
-    let cntStdout2 = '';
     try {
-      cntStdout2 = await runOpencodeTracked(['db', 'SELECT session_id, COUNT(*) as message_count FROM message GROUP BY session_id']);
-      console.log('[OpencodeTools] batch count raw (first 2000):', cntStdout2.slice(0, 2000));
-      console.log('[OpencodeTools] first session ID sample:', sessions[0]?.id);
-      const rows = JSON.parse(cntStdout2);
-      if (Array.isArray(rows)) {
-        for (const row of rows) {
-          const sid = row.session_id || row.id;
-          const cnt = row.message_count || row.c || row.count || 0;
-          if (sid && cnt > 0) countMap.set(sid, cnt);
-        }
+      const cntRaw = await runOpencodeTracked(['db', 'SELECT session_id, COUNT(*) as cnt FROM message GROUP BY session_id']);
+      const rows = parseTSV(cntRaw);
+      for (const row of rows) {
+        const sid = row.session_id || row.id;
+        const cnt = parseInt(row.cnt || '0', 10);
+        if (sid && cnt > 0) countMap.set(sid, cnt);
       }
     } catch (e) {
-      console.warn('[OpencodeTools] 批量查询消息数失败:', e, 'output:', cntStdout2?.slice(0, 200));
+      console.warn('[OpencodeTools] 批量查询消息数失败:', e);
     }
 
     const results = sessions
@@ -410,7 +418,7 @@ ipcMain.handle(IPC.OPENCODE_CONVERSATIONS_LIST, async () => {
         id: s.id,
         title: s.title?.substring(0, 80) || '未命名对话',
         date: s.updated ? new Date(s.updated).toISOString() : s.created ? new Date(s.created).toISOString() : new Date().toISOString(),
-        messageCount: countMap.get(s.id) || 1,
+        messageCount: countMap.get(s.id) || 0,
         projectPath: s.directory || '',
       }))
       .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -424,28 +432,47 @@ ipcMain.handle(IPC.OPENCODE_CONVERSATIONS_LIST, async () => {
 
 ipcMain.handle(IPC.OPENCODE_CONVERSATION_MESSAGES, async (_event, conversationId: string, _projectPath: string) => {
   try {
-    const stdout = await runOpencodeTracked(['db', `SELECT m.id, m.time_created, m.data FROM message m WHERE m.session_id='${conversationId.replace(/'/g, "''")}' ORDER BY m.time_created`]);
-    console.log('[OpencodeTools] messages raw (first 1000):', stdout.slice(0, 1000));
-    const lines = stdout.trim().split('\n').filter(Boolean);
+    // 查询1：从 message 表获取 role 和 token 信息
+    const msgStdout = await runOpencodeTracked(['db',
+      `SELECT m.id, m.time_created, json_extract(m.data, '$.role') as role, json_extract(m.data, '$.tokens.input') as ti, json_extract(m.data, '$.tokens.output') as to_, json_extract(m.data, '$.modelID') as model_id FROM message m WHERE m.session_id='${conversationId.replace(/'/g, "''")}' ORDER BY m.time_created`
+    ]);
+    const msgRows = parseTSV(msgStdout);
+    if (msgRows.length === 0) return { messages: [], totalInputTokens: 0, totalOutputTokens: 0, model: undefined };
+
+    // 查询2：从 event 表获取实际的文本内容（按 messageID 分组聚合）
+    const textStdout = await runOpencodeTracked(['db',
+      `SELECT json_extract(data, '$.part.messageID') as mid, group_concat(json_extract(data, '$.part.text'), '') as text FROM (SELECT data FROM event WHERE json_extract(data, '$.sessionID') = '${conversationId.replace(/'/g, "''")}' AND json_extract(data, '$.part.type') = 'text' ORDER BY rowid) GROUP BY mid`
+    ]);
+    const textRows = parseTSV(textStdout);
+    const textMap = new Map<string, string>();
+    for (const row of textRows) {
+      if (row.mid && row.text) textMap.set(row.mid, row.text);
+    }
+
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let lastModel: string | undefined;
     const messages: Array<{ role: string; content: string; timestamp: string }> = [];
 
-    for (const line of lines) {
-      try {
-        const row = JSON.parse(line);
-        if (!row || !row.data) continue;
-        const data = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
-        const role = data.role === 'user' ? 'user' : 'assistant';
-        const text = (typeof data.content === 'string' ? data.content : data.content?.text || data.text || '').trim();
-        if (text) {
-          messages.push({
-            role,
-            content: text,
-            timestamp: row.time_created ? new Date(row.time_created).toISOString() : '',
-          });
-        }
-      } catch { /* skip */ }
+    for (const row of msgRows) {
+      const role = row.role === 'user' ? 'user' : 'assistant';
+      const msgId = row.id;
+      const text = textMap.get(msgId) || '';
+      const inputTokens = parseInt(row.ti || '0', 10);
+      const outputTokens = parseInt(row.to_ || '0', 10);
+      totalInputTokens += inputTokens;
+      totalOutputTokens += outputTokens;
+      if (row.model_id) lastModel = row.model_id;
+      if (text) {
+        messages.push({
+          role,
+          content: text,
+          timestamp: row.time_created ? new Date(parseInt(row.time_created, 10)).toISOString() : '',
+        });
+      }
     }
-    return { messages, totalInputTokens: 0, totalOutputTokens: 0, model: undefined };
+
+    return { messages, totalInputTokens, totalOutputTokens, model: lastModel };
   } catch (err) {
     console.error('[OpencodeTools] 获取对话消息失败:', err);
     return { messages: [], totalInputTokens: 0, totalOutputTokens: 0, model: undefined };
