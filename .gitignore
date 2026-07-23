@@ -28,3 +28,7 @@ Thumbs.db
 
 # Logs
 *.log
+
+# electron-builder debug output
+release/*.yml
+release/win-unpacked/

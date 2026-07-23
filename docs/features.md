@@ -1,5 +1,30 @@
 # MLX Forge — Feature Guide
 
+```mermaid
+mindmap
+  MLX Forge
+    Terminal
+      Dual PTY shell
+      Opencode + Claude
+      Ctrl+C/V
+    Editor
+      CodeMirror 6
+      40+ Languages
+      Find & Replace
+    Files
+      File Browser
+      Name Search
+      Content Search
+    Management
+      Conversations
+      Prompts
+      Skills / MCP
+    Customize
+      Themes
+      Layout
+      Shortcuts
+```
+
 ## 1. 🖥️ Dual Terminal System
 
 Run Opencode and Claude CLI tools side by side in separate PowerShell PTY terminals.
@@ -11,6 +36,31 @@ Run Opencode and Claude CLI tools side by side in separate PowerShell PTY termin
 │ Opencode v1.18 ready                │
 │ > _                                │  ← Active terminal
 └─────────────────────────────────────┘
+```
+
+**Architecture:**
+
+```mermaid
+graph LR
+    subgraph "Renderer"
+        XT[XTerm.js 5.3]
+        TP[TerminalPanel]
+    end
+    subgraph "Main Process"
+        TM[TerminalManager<br/>PTY Manager]
+        NP[@lydell/node-pty]
+    end
+    subgraph "OS"
+        PS[PowerShell]
+        OC[opencode CLI]
+        CL[claude CLI]
+    end
+    TP -->|IPC| TM
+    TM --> NP
+    NP --> PS
+    PS --> OC & CL
+    PS -->|stdout| NP
+    NP -->|onData IPC| XT
 ```
 
 - **Auto-start**: Opens opencode immediately; Claude starts 3 seconds later
@@ -78,6 +128,19 @@ Full-disk file name indexing and search, similar to Everything by Voidtools.
 
 Cross-file text search across your entire project.
 
+```mermaid
+graph TD
+    U[User types query] --> CS[ContentSearch Panel]
+    CS -->|IPC| IPC2[fs.ipc.ts handler]
+    IPC2 --> RG{ripgrep available?}
+    RG -->|Yes| SPAWN[spawn rg process]
+    RG -->|No| FALLBACK[Node.js file scan]
+    SPAWN --> PARSE[Parse rg output]
+    FALLBACK --> PARSE
+    PARSE --> DISPLAY[Group results by file]
+    DISPLAY --> CLICK[Click row → open file in editor]
+```
+
 - **Engine**: ripgrep (rg) with Node.js fallback
 - **Search scope**: All text files in project directory
 - **Results**: Grouped by file, expand to see individual matches with line numbers
@@ -112,6 +175,25 @@ Browse, view, and resume Claude and Opencode conversations.
 ## 7. 💡 Prompt Manager (`Ctrl+Shift+M`)
 
 Hierarchical prompt library stored as `.md` files in a `prompts/` directory.
+
+```mermaid
+graph LR
+    subgraph "List View"
+        DIR[coding/<br/>writing/<br/>system/]
+    end
+    subgraph "Detail View"
+        TITLE[# Code Review]
+        BODY[Review code for...]
+    end
+    subgraph "Edit View"
+        TA[textarea<br/># Code Review<br/>Review code...]
+        SAVE[💾 Save]
+    end
+    DIR -->|Click .md| TITLE
+    TITLE -->|Click ✏ Edit| TA
+    TA -->|💾 Save| TITLE
+    TITLE -->|← Back| DIR
+```
 
 ```
 ┌─────────────────────────────────────┐

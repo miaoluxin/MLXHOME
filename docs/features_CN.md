@@ -1,8 +1,56 @@
 # MLX Forge — 功能指南
 
+```mermaid
+mindmap
+  MLX Forge
+    终端系统
+      双 PTY Shell
+      Opencode + Claude
+      Ctrl+C/V
+    代码编辑器
+      CodeMirror 6
+      40+ 语言
+      查找替换
+    文件管理
+      文件浏览器
+      文件名搜索
+      内容搜索
+    管理工具
+      对话管理
+      提示词管理
+      Skill / MCP
+    个性化
+      主题系统
+      布局拖拽
+      快捷键
+```
+
 ## 1. 🖥️ 双终端系统
 
 Opencode 和 Claude CLI 工具在独立的 PowerShell PTY 终端中并行运行。
+
+```mermaid
+graph LR
+    subgraph "渲染进程"
+        XT[XTerm.js 5.3]
+        TP[TerminalPanel]
+    end
+    subgraph "主进程"
+        TM[TerminalManager]
+        NP[@lydell/node-pty]
+    end
+    subgraph "操作系统"
+        PS[PowerShell]
+        OC[opencode CLI]
+        CL[claude CLI]
+    end
+    TP -->|IPC| TM
+    TM --> NP
+    NP --> PS
+    PS --> OC & CL
+    PS -->|stdout| NP
+    NP -->|onData IPC| XT
+```
 
 - **自动启动**：立即启动 opencode，Claude 延迟 3 秒启动
 - **新建终端**：点击 `+` 选择 Claude、Opencode 或自定义命令

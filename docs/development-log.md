@@ -2723,7 +2723,8 @@ assets/PromptManager-xxx.js         10.32 kB
 | **第十五轮** | **07-23 10:00** | **QuickTools提示词按钮+导出图标+返回位置+Opencode日志** | **0** | **4** |
 | **第十六轮** | **07-23 14:00** | **启动不建终端+进程退出+索引设置+ErrorBoundary+CM6懒加载+Claude异步+IPC优化** | **4** | **15** |
 | **第十七轮** | **07-23 18:00** | **暗黑主题加深+主题应用修复+Opencode日志+EverythingSearch同步** | **0** | **6** |
-| **合计** | | | **37文件** | **106+文件** |
+| **第十八轮** | **07-23 23:30** | **环境统一+gitignore+索引默认路径+文档Mermaid框图+全量提交** | **0** | **7** |
+| **合计** | | | **37文件** | **113+文件** |
 
 ---
 
@@ -2753,6 +2754,24 @@ assets/PromptManager-xxx.js         10.32 kB
 66. **`clearInlineColors` 必须覆盖所有 CSS 变量** — 漏掉终端色变量会导致自定义主题切换回内置主题后终端色残留
 67. **`handleApply` 对内置主题不能调 `setTheme`** — `setTheme` → `applyTheme` → `clearInlineColors` 会清除用户实时编辑的内联颜色。应该直接 `previewColors(editingColors)` 保留编辑
 68. **手工同步文件容易遗漏** — 第一次打包时 EverythingSearch 和 AppMain 的改动没有同步到 claudeforge，导致齿轮按钮不出现在打包版中。后续用批量脚本确保完整性
+
+---
+
+## 第十八轮：最终环境统一 + 文档完善（2026-07-23）
+
+### 改动
+
+| # | 改动 | 文件 | 说明 |
+|---|------|------|------|
+| 1 | 构建环境统一到 MLX_Tool_Git | `MLX_Tool_Git\` + `claudeforge\electron-builder.yml` | 复制 node_modules，`output:` 指向 `MLX_Tool_Git\release` |
+| 2 | `.gitignore` 补全 | `.gitignore` | 追加 `release/*.yml` 排除 builder-debug.yml |
+| 3 | 索引默认路径 = 家目录 + 项目目录 | `useIndexSettingsStore.ts`、`AppMain.tsx` | `load(projectPath)` 接收项目路径合并到 defaults |
+| 4 | 文档 Mermaid 框图 | `docs/features.md`、`docs/features_CN.md` | 系统架构图、终端架构图、内容搜索流程图、提示词三级交互图 |
+
+### 经验教训
+
+69. **构建环境必须统一** — 之前用 `claudeforge/` 构建、`MLX_Tool_Git/` 做 git，文件同步遗漏导致打包版功能缺失。以后都从 `MLX_Tool_Git/` 构建。
+70. **索引路径默认要覆盖常用目录** — 只扫家目录不够，项目目录才是用户真正搜索的地方。`useIndexSettingsStore.load(projectPath)` 接收项目路径作为参数。
 
 ### 改动清单
 

@@ -202,7 +202,7 @@ export default function AppMain() {
     window.addEventListener('keydown', handleToggleBrowser);
 
     // 延迟10秒启动文件索引（不阻塞UI首屏渲染）
-    useIndexSettingsStore.getState().load();
+    useIndexSettingsStore.getState().load(useProjectStore.getState().projectPath || undefined);
     const indexRoots = useIndexSettingsStore.getState().roots;
     setTimeout(() => {
       window.electronAPI.fileIndexer.start(indexRoots.length > 0 ? indexRoots : undefined).catch((err) => {

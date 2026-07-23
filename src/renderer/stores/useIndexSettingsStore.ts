@@ -5,7 +5,7 @@ const STORAGE_KEY = 'mlx-index-roots';
 interface IndexSettingsState {
   roots: string[];
   initialized: boolean;
-  load: () => void;
+  load: (projectPath?: string) => void;
   setRoots: (roots: string[]) => void;
   addRoot: (root: string) => void;
   removeRoot: (root: string) => void;
@@ -15,17 +15,19 @@ export const useIndexSettingsStore = create<IndexSettingsState>((set, get) => ({
   roots: [],
   initialized: false,
 
-  load: () => {
+  load: (projectPath?: string) => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         set({ roots: JSON.parse(raw), initialized: true });
       } else {
-        // 默认：用户家目录
+        // 默认：家目录 + 项目目录
         const home = process.env.USERPROFILE || '';
-        const defaults = home ? [home] : [];
-        set({ roots: defaults, initialized: true });
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(defaults));
+        const dirs: string[] = [];
+        if (home) dirs.push(home);
+        if (projectPath && !dirs.includes(projectPath)) dirs.push(projectPath);
+        set({ roots: dirs, initialized: true });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(dirs));
       }
     } catch {
       set({ initialized: true });

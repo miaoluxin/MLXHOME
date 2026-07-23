@@ -3,6 +3,27 @@
 ## [1.0.0] - 2026-07-23
 
 ### Added
+- File index settings panel with directory tree selection (gear button in EverythingSearch)
+- Error Boundary for each panel — crash isolation
+- Built-in theme color overrides (localStorage persistence)
+- Mermaid architecture diagrams in feature documentation
+
+### Changed
+- Dark theme deepened to Material Dark level (`#0a0a0a`)
+- Index default paths: home directory + project directory (configurable)
+- Build environment unified to `MLX_Tool_Git/`
+- ClearInlineColors now covers terminal color variables
+
+### Fixed
+- Theme colors not saving when applying on built-in themes
+- Theme colors lost after switching away and back
+- EverythingSearch settings button missing from packaged build
+- Process hang on app close (killAll + active process tracking)
+- Claude conversation scanning blocking main process (sync→async)
+- Terminal IPC overhead (invoke→send)
+- Opencode conversation N+1 query performance
+
+### Added
 - Dual terminal system: Opencode + Claude parallel PTY sessions
 - Conversation manager with Claude/Opencode tab switching
 - Content search (`Ctrl+Shift+F`) with ripgrep + Node.js fallback
