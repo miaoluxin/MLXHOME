@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { memo, useRef, useEffect } from 'react';
 import { VscFile, VscFolder } from 'react-icons/vsc';
 import type { FileEntry } from '../../../shared/types';
 
@@ -37,7 +37,7 @@ function formatSize(bytes: number): string {
   return `${(bytes / 1073741824).toFixed(1)} GB`;
 }
 
-export function FileRow({ entry, isSelected, editing, onRenameCommit, onRenameCancel, onClick, onDoubleClick, onContextMenu }: Props) {
+export const FileRow = memo(function FileRow({ entry, isSelected, editing, onRenameCommit, onRenameCancel, onClick, onDoubleClick, onContextMenu }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 进入编辑模式时自动聚焦并选中文件名（不含扩展名）
@@ -110,4 +110,4 @@ export function FileRow({ entry, isSelected, editing, onRenameCommit, onRenameCa
       </span>
     </div>
   );
-}
+});

@@ -67,11 +67,14 @@ export function IndexSettings({ onClose }: Props) {
   };
 
   const handleSave = () => {
-    setRoots(Array.from(selected));
+    const newRoots = Array.from(selected);
+    setRoots(newRoots);
     onClose();
-    window.electronAPI.fileIndexer.reindex(Array.from(selected)).catch((err: any) => {
-      console.error('[IndexSettings] 重建索引失败:', err);
-    });
+    setTimeout(() => {
+      window.electronAPI.fileIndexer.reindex(newRoots).catch((err: any) => {
+        console.error('[IndexSettings] 重建索引失败:', err);
+      });
+    }, 3000);
   };
 
   const renderTree = (items: DirEntry[], depth: number) => {
