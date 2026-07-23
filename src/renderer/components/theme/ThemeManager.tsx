@@ -2,6 +2,29 @@ import { useState, useEffect } from 'react';
 import { VscClose, VscAdd, VscTrash } from 'react-icons/vsc';
 import { useThemeStore, BUILT_IN_THEMES, clearInlineColors, type CustomTheme, type ThemeColors, type BuiltInThemeId } from '../../stores/useThemeStore';
 
+// ── 内置主题修改覆盖层（localStorage）──
+const OVERRIDES_KEY = 'mlx-theme-overrides';
+function saveThemeOverride(id: string, colors: ThemeColors) {
+  try {
+    const overrides = JSON.parse(localStorage.getItem(OVERRIDES_KEY) || '{}');
+    overrides[id] = colors;
+    localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
+  } catch { /* ignore */ }
+}
+function loadThemeOverride(id: string): ThemeColors | null {
+  try {
+    const overrides = JSON.parse(localStorage.getItem(OVERRIDES_KEY) || '{}');
+    return overrides[id] || null;
+  } catch { return null; }
+}
+function clearThemeOverride(id: string) {
+  try {
+    const overrides = JSON.parse(localStorage.getItem(OVERRIDES_KEY) || '{}');
+    delete overrides[id];
+    localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
+  } catch { /* ignore */ }
+}
+
 interface Props {
   onClose: () => void;
 }
@@ -88,11 +111,11 @@ export function ThemeManager({ onClose }: Props) {
     setSelectedId(id);
     setIsNew(false);
     if (id in BUILT_IN_NAMES) {
-      // 内置主题：清除残留内联样式后用CSS data-theme预览
       clearInlineColors();
       document.documentElement.dataset.theme = id;
-      // 直接从内置主题常量加载正确颜色（而非依赖store.current）
-      setEditingColors({ ...BUILT_IN_THEMES[id as BuiltInThemeId] });
+      // 检查是否有保存的覆盖色，有则用覆盖色，没有则用出厂色
+      const override = loadThemeOverride(id);
+      setEditingColors(override ? { ...override } : { ...BUILT_IN_THEMES[id as BuiltInThemeId] });
       setEditingName('');
     } else {
       const ct = customThemes.find(t => t.id === id);
@@ -154,12 +177,11 @@ export function ThemeManager({ onClose }: Props) {
     if (!isBuiltIn) return;
     const builtInId = selectedId as BuiltInThemeId;
     const defaults = BUILT_IN_THEMES[builtInId];
-    // 恢复CSS变量为默认值
     clearInlineColors();
     document.documentElement.dataset.theme = builtInId;
-    // 更新编辑器显示默认颜色
     setEditingColors({ ...defaults });
-    // 应用并关闭
+    // 清除覆盖层
+    clearThemeOverride(builtInId);
     setTheme(builtInId);
     onClose();
   };
@@ -181,8 +203,8 @@ export function ThemeManager({ onClose }: Props) {
       }
       setTheme(selectedId);
     } else {
-      // 内置主题：直接应用编辑后的颜色，不清除内联样式
-      // 不调 setTheme（它会 clearInlineColors 清除用户修改）
+      // 内置主题：保存覆盖色到 localStorage，切回时恢复
+      saveThemeOverride(selectedId, editingColors);
       previewColors(editingColors);
       localStorage.setItem('mlx-theme', selectedId);
     }

@@ -6,6 +6,30 @@ export type ThemeId = BuiltInThemeId | string;
 
 const STORAGE_KEY = 'mlx-theme';
 const CUSTOM_STORAGE_KEY = 'mlx-custom-themes';
+const OVERRIDES_KEY = 'mlx-theme-overrides';
+
+function saveThemeOverride(themeId: string, colors: ThemeColors) {
+  try {
+    const overrides = JSON.parse(localStorage.getItem(OVERRIDES_KEY) || '{}');
+    overrides[themeId] = colors;
+    localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
+  } catch { /* ignore */ }
+}
+
+function loadThemeOverride(themeId: string): ThemeColors | null {
+  try {
+    const overrides = JSON.parse(localStorage.getItem(OVERRIDES_KEY) || '{}');
+    return overrides[themeId] || null;
+  } catch { return null; }
+}
+
+function clearThemeOverride(themeId: string) {
+  try {
+    const overrides = JSON.parse(localStorage.getItem(OVERRIDES_KEY) || '{}');
+    delete overrides[themeId];
+    localStorage.setItem(OVERRIDES_KEY, JSON.stringify(overrides));
+  } catch { /* ignore */ }
+}
 
 // ── 主题颜色定义 ──
 export interface ThemeColors {
@@ -101,7 +125,10 @@ function loadThemeId(): string {
 }
 
 function getColorsForTheme(themeId: string, customThemes: CustomTheme[]): ThemeColors | null {
-  if (themeId in BUILT_IN_THEMES) return BUILT_IN_THEMES[themeId as BuiltInThemeId];
+  if (themeId in BUILT_IN_THEMES) {
+    const override = loadThemeOverride(themeId);
+    return override || BUILT_IN_THEMES[themeId as BuiltInThemeId];
+  }
   return customThemes.find(t => t.id === themeId)?.colors ?? null;
 }
 
@@ -151,10 +178,11 @@ function applyTheme(themeId: string, customThemes: CustomTheme[]) {
   try { localStorage.setItem(STORAGE_KEY, themeId); } catch { /* ignore */ }
 
   if (themeId in BUILT_IN_THEMES) {
-    // 内置主题：清除残留内联样式后使用CSS data-theme选择器
     clearInlineColors();
     document.documentElement.dataset.theme = themeId;
-    const colors = BUILT_IN_THEMES[themeId as BuiltInThemeId];
+    const override = loadThemeOverride(themeId);
+    const colors = override || BUILT_IN_THEMES[themeId as BuiltInThemeId];
+    if (override) applyColors(override); // 有覆盖时用内联样式覆盖 data-theme
     try { window.electronAPI?.window?.setBackgroundColor(colors.windowBg); } catch { /* ignore */ }
   } else {
     // 自定义主题：逐个注入CSS变量
