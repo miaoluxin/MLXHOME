@@ -7,8 +7,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "electron:build": "vite build && electron-builder",
-    "electron:build:win": "vite build && electron-builder --win",
+    "electron:build": "vite build && electron-builder --win && node -e \"const fs=require('fs');const p='release/win-unpacked';if(fs.existsSync(p))fs.rmSync(p,{recursive:true});try{fs.unlinkSync('release/builder-debug.yml')}catch(e){}\"",
+    "electron:build:win": "vite build && electron-builder --win && node -e \"const fs=require('fs');const p='release/win-unpacked';if(fs.existsSync(p))fs.rmSync(p,{recursive:true});try{fs.unlinkSync('release/builder-debug.yml')}catch(e){}\"",
     "postinstall": "echo '提示: 请在安装 Visual Studio Build Tools 后运行 npx electron-rebuild -f -w node-pty'",
     "preview": "vite preview"
   },
