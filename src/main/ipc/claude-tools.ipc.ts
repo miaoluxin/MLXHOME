@@ -388,15 +388,18 @@ ipcMain.handle(IPC.OPENCODE_CONVERSATIONS_LIST, async () => {
     // 批量查询所有 session 的消息数（替代 N+1）
     const countMap = new Map<string, number>();
     try {
-      const cntStdout = await runOpencode(['db', 'SELECT session_id, COUNT(*) as c FROM message GROUP BY session_id']);
+      const cntStdout = await runOpencode(['db', 'SELECT session_id, COUNT(*) as message_count FROM message GROUP BY session_id']);
+      console.log('[OpencodeTools] batch count raw:', cntStdout.slice(0, 500));
       const rows = JSON.parse(cntStdout);
       if (Array.isArray(rows)) {
         for (const row of rows) {
-          if (row.session_id && typeof row.c === 'number') countMap.set(row.session_id, row.c);
+          const sid = row.session_id || row.id;
+          const cnt = row.message_count || row.c || row.count || 0;
+          if (sid && cnt > 0) countMap.set(sid, cnt);
         }
       }
     } catch (e) {
-      console.warn('[OpencodeTools] 批量查询消息数失败:', e);
+      console.warn('[OpencodeTools] 批量查询消息数失败:', e, 'output:', cntStdout?.slice(0, 200));
     }
 
     const results = sessions

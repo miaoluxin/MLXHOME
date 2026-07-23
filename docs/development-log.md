@@ -2720,4 +2720,37 @@ assets/PromptManager-xxx.js         10.32 kB
 | 第十二轮 | 07-13 14:00 | 终端"+"弹出命令选择对话框 | 1 | 1 |
 | 第十三轮 | 07-14 17:00 | 终端复制粘贴+QuickTools+自动刷新 | 0 | 10 |
 | **第十四轮** | **07-22 18:00** | **大规模优化+Opencode+内容搜索+提示词管理** | **8** | **20** |
-| **合计** | | | **33文件** | **81+文件** |
+| **第十五轮** | **07-23 10:00** | **QuickTools提示词按钮+导出图标+返回位置+Opencode日志** | **0** | **4** |
+| **合计** | | | **33文件** | **85+文件** |
+
+---
+
+## 第十五轮：修复与打磨（2026-07-23）
+
+### Bug 1：QuickTools 缺少提示词管理按钮
+
+**根因**：`QuickTools.tsx` 虽然有 `showPrompts` 和 `setShowPrompts` 的解构，但没有对应的 `if (!showPrompts)` 按钮块。
+
+**修复**（`QuickTools.tsx`）：追加隐藏按钮块，使用 `VscSymbolRuler` 图标。
+
+### Bug 2：Opencode 消息数排查
+
+**根因**：批量查询 `SELECT session_id, COUNT(*) FROM message GROUP BY session_id` 的输出格式可能与预期不同（字段名不是 `session_id` 和 `c`）。
+
+**修复**（`claude-tools.ipc.ts`）：
+- 在解析前 `console.log` 原始输出（前 500 字符）
+- 容错多种字段名：`session_id`/`id`、`message_count`/`c`/`count`
+
+### Bug 3：导出按钮图标与返回按钮位置
+
+**导出图标**：`VscExport` → `VscArrowDown`（向下箭头下载图标）
+
+**返回按钮**：从标题栏右上方移到详情内容区顶部固定位置（`sticky top-0 z-10 bg-bg-deep`），带「返回」文字标签，不管滚动到哪都可见。
+
+### 修改文件清单
+
+| 文件 | 改动 |
+|------|------|
+| `src/renderer/components/layout/QuickTools.tsx` | + 提示词管理隐藏按钮 |
+| `src/renderer/components/tools/ConversationManager.tsx` | VscExport→VscArrowDown + 返回按钮移到详情顶部sticky |
+| `src/main/ipc/claude-tools.ipc.ts` | Opencode批量查询加日志 + 多字段名兼容 |

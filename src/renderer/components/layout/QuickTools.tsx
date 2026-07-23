@@ -92,6 +92,15 @@ export function QuickTools() {
     });
   }
 
+  if (!showPrompts) {
+    hiddenTools.push({
+      id: 'prompts',
+      label: '提示词管理',
+      icon: <VscSymbolRuler size={16} />,
+      onClick: () => setShowPrompts(true),
+    });
+  }
+
   // 全部工具打开时隐藏
   if (hiddenTools.length === 0) return null;
 

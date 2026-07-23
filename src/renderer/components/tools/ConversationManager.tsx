@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react';
-import { VscCommentDiscussion, VscClose, VscRefresh, VscReply, VscArrowLeft, VscExport } from 'react-icons/vsc';
+import { VscCommentDiscussion, VscClose, VscRefresh, VscReply, VscArrowLeft, VscArrowDown } from 'react-icons/vsc';
 import { DraggablePanelHeader } from '../layout/DraggablePanelHeader';
 import { useLayoutStore } from '../../stores/useLayoutStore';
 import { useTerminalStore } from '../../stores/useTerminalStore';
@@ -104,14 +104,9 @@ export function ConversationManager() {
         </div>
         <div className="flex items-center gap-1 flex-shrink-0">
           {selectedId ? (
-            <>
-              <button onClick={() => handleExport(selectedConv!)} className="w-6 h-6 flex items-center justify-center rounded hover:bg-bg-hover text-text-secondary hover:text-text-primary transition-colors" title="导出为 Markdown">
-                <VscExport size={14} />
-              </button>
-              <button onClick={clearSelection} className="w-6 h-6 flex items-center justify-center rounded hover:bg-bg-hover text-text-secondary hover:text-text-primary transition-colors" title="返回列表">
-                <VscArrowLeft size={14} />
-              </button>
-            </>
+            <button onClick={() => handleExport(selectedConv!)} className="w-6 h-6 flex items-center justify-center rounded hover:bg-bg-hover text-text-secondary hover:text-text-primary transition-colors" title="导出为 Markdown">
+              <VscArrowDown size={14} />
+            </button>
           ) : (
             <button onClick={loadConversations} className="w-6 h-6 flex items-center justify-center rounded hover:bg-bg-hover text-text-secondary hover:text-text-primary transition-colors" title="刷新">
               <VscRefresh size={14} />
@@ -142,7 +137,11 @@ export function ConversationManager() {
       {/* ── 详情模式 ── */}
       {selectedId ? (
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="flex items-center gap-2 px-3 py-1.5 border-b border-border-subtle flex-shrink-0">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-border-subtle flex-shrink-0 bg-bg-deep sticky top-0 z-10">
+            <button onClick={clearSelection} className="flex items-center gap-1 px-2 py-1 text-[10px] text-text-secondary hover:text-text-primary rounded hover:bg-bg-hover transition-colors" title="返回列表">
+              <VscArrowLeft size={12} /> 返回
+            </button>
+            <div className="flex-1" />
             <button onClick={() => { if (selectedConv) handleResume(selectedConv); }}
               className="flex items-center gap-1 px-2 py-0.5 text-[10px] bg-accent/10 text-accent rounded hover:bg-accent/20 transition-colors" title="恢复对话到终端">
               <VscReply size={12} /> 恢复到终端
